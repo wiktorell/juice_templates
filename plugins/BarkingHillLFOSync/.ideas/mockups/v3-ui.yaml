@@ -1,0 +1,284 @@
+---
+# BarkingHillLFOSync UI Specification — v3
+# Generated: 2026-02-21
+# Window: 700×390 — vintage oscilloscope hardware aesthetic
+# Change from v2: height increased 340→390px for generous label/value breathing room
+# Controls row stays at y=222 (unchanged). Extra 50px is pure bottom padding.
+
+meta:
+  plugin_name: BarkingHillLFOSync
+  version: 3
+  type: utility
+  description: Tempo-syncable LFO modulator with animated waveform display
+
+window:
+  width: 700
+  height: 390
+  resizable: false
+
+# ─────────────────────────────────────────────
+# Waveform Display Region (visual element only)
+# Not a JUCE control — rendered via canvas/SVG in WebView
+# ─────────────────────────────────────────────
+display:
+  id: waveform_display
+  role: visualization
+  position: { x: 15, y: 15 }
+  size: { width: 670, height: 185 }
+  description: >
+    Animated oscilloscope showing current LFO waveform. Canvas element redraws
+    at ~60 fps. A vertical playhead line sweeps left-to-right through one full
+    cycle. Waveform shape responds to the waveform parameter. CRT scan-line
+    overlay and vignette for vintage feel.
+  title_label: "BARKING HILL LFO SYNC"
+  title_position: { x: 12, y: 12 }
+
+# ─────────────────────────────────────────────
+# Controls
+# All in a single row below the waveform display
+# Row top: y=222, row height: ~100px, bottom edge: y=312 (78px from bottom — v3)
+# Controls are horizontally distributed across 700px
+#
+# Layout (left to right):
+#   Rate knob        (90×90) @ x=20   — left padding 20px ✓ (≥15)
+#   Depth knob       (90×90) @ x=135  — gap from Rate right(110): 25px ✓
+#   Waveform knob    (90×90) @ x=255  — gap from Depth right(225): 30px ✓
+#   Sync toggle      (32×80) @ x=375  — gap from Waveform right(345): 30px ✓
+#   Retrigger toggle (32×80) @ x=430  — gap from Sync right(407): 23px ✓
+#   CC knob          (60×60) @ x=483  — gap from Retrigger right(462): 21px ✓
+#   Assign button    (80×36) @ x=573  — gap from CC right(543): 30px ✓
+#
+# Edge checks:
+#   Assign right edge: 573+80=653, window right 700 → right padding=47px ✓
+#   Leftmost: Rate x=20 ≥ 15px ✓
+#   Bottom (tallest control, 90px): 222+90=312, window=390, padding=78px ✓
+#   Bottom (toggles, 80px): 222+80=302, window=390, padding=88px ✓
+#   Top of controls: y=222, display bottom=200, gap=22px ✓
+#
+# All inter-control gaps ≥ 10px ✓
+# v3 bottom padding: 78px (was 28px in v2) — generous label/value room ✓
+# ─────────────────────────────────────────────
+
+controls:
+  # ── Rate Knob ──────────────────────────────
+  - id: rate
+    type: slider
+    position: { x: 20, y: 222 }
+    size: { width: 90, height: 90 }
+    range: [0.1, 10.0]
+    default: 1.0
+    step: null          # continuous in free mode, stepped via sync logic
+    label: "RATE"
+    unit: "Hz"
+    description: >
+      LFO rate in free mode (0.1–10 Hz). When sync=Clock the label switches to
+      subdivision name (4 bars … 1/32T). Knob becomes a stepped selector over
+      the 13 clock subdivision values.
+    display_precision: 2
+    note: In sync mode the knob maps 0–1 over 13 subdivision steps
+
+  # ── Depth Knob ─────────────────────────────
+  - id: depth
+    type: slider
+    position: { x: 135, y: 222 }
+    size: { width: 90, height: 90 }
+    range: [-100.0, 100.0]
+    default: 50.0
+    label: "DEPTH"
+    unit: "%"
+    description: >
+      Bipolar modulation depth. 0% = no modulation. Indicator at 12 o'clock
+      position represents 0%. Negative values invert the LFO direction.
+    display_precision: 0
+
+  # ── Waveform Knob ──────────────────────────
+  - id: waveform
+    type: combo
+    position: { x: 255, y: 222 }
+    size: { width: 90, height: 90 }
+    options:
+      - { id: 0, label: "SINE" }
+      - { id: 1, label: "TRIANGLE" }
+      - { id: 2, label: "SQUARE" }
+      - { id: 3, label: "SAW UP" }
+      - { id: 4, label: "SAW DOWN" }
+    default: 0
+    label: "WAVEFORM"
+    description: >
+      Stepped knob cycling through 5 LFO shapes. Selected shape name shown
+      below knob. Waveform display updates immediately to reflect choice.
+    note: Rendered as a rotary knob with discrete steps, not a dropdown
+
+  # ── Sync Toggle ────────────────────────────
+  - id: sync
+    type: toggle
+    position: { x: 375, y: 222 }
+    size: { width: 32, height: 80 }
+    default: false
+    label: "SYNC"
+    options:
+      off_label: "FREE"
+      on_label: "CLOCK"
+    description: >
+      Switches Rate knob between free-running Hz mode and MIDI clock
+      subdivision mode. Affects how the rate parameter value is interpreted
+      and displayed.
+
+  # ── Retrigger Toggle ───────────────────────
+  - id: retrigger
+    type: toggle
+    position: { x: 430, y: 222 }
+    size: { width: 32, height: 80 }
+    default: false
+    label: "RETRIG"
+    options:
+      off_label: "OFF"
+      on_label: "ON"
+    description: >
+      When enabled, resets LFO phase to 0 on each incoming MIDI note-on event.
+      Useful for rhythmic gating and tightly synced modulation.
+
+  # ── CC Number Knob ─────────────────────────
+  - id: cc_number
+    type: slider
+    position: { x: 483, y: 232 }
+    size: { width: 60, height: 60 }
+    range: [1, 127]
+    default: 1
+    step: 1
+    label: "CC"
+    description: >
+      Stepped integer selector for MIDI CC output number (1–127).
+      Smaller knob than Rate/Depth/Waveform. Label shows "CC N" where N is
+      the current integer value.
+    display_precision: 0
+    note: Rendered at 60px diameter — smaller than the 90px main knobs
+
+  # ── Assign Button ──────────────────────────
+  - id: assign
+    type: toggle
+    position: { x: 573, y: 249 }
+    size: { width: 80, height: 36 }
+    default: false
+    label: "ASSIGN"
+    description: >
+      Momentary-style button (toggle in mock) that arms the plugin to capture
+      a target parameter from another plugin. When armed, button pulses with
+      a warm brass glow animation. Click again or after capture to disarm.
+
+# ─────────────────────────────────────────────
+# Styling
+# ─────────────────────────────────────────────
+styling:
+  colors:
+    background_gradient:
+      type: radial
+      center: "#4a3a2a"
+      edge: "#2a1a0a"
+    surface: "#3a2a1a"
+    inset: "#1a0a00"
+    accent_primary: "#d4a574"    # brass/gold
+    accent_secondary: "#c49564"
+    text_primary: "#c49564"
+    text_shadow: "rgba(0,0,0,0.8)"
+    waveform_line: "#d4a574"
+    playhead_line: "#d4a574"
+
+  fonts:
+    primary: "'Helvetica Neue', Helvetica, Arial, sans-serif"
+    title:
+      size: 11
+      weight: 300
+      letter_spacing: "0.4em"
+      transform: uppercase
+    label:
+      size: 10
+      weight: 500
+      letter_spacing: "0.3em"
+      transform: uppercase
+    value:
+      size: 9
+      weight: 400
+
+  knobs:
+    main_diameter: 90
+    cc_diameter: 60
+    background_gradient:
+      stops:
+        - { pos: 0, color: "#3a2a1a" }
+        - { pos: 0.5, color: "#2f2015" }
+        - { pos: 1, color: "#1a0a00" }
+    indicator:
+      width: 4
+      length: 35
+      color: "#d4a574"
+    shadow: "0 4px 12px rgba(0,0,0,0.8), 0 2px 4px rgba(0,0,0,0.6), inset 0 1px 0 rgba(212,165,116,0.15)"
+    hover_scale: 1.005
+    active_scale: 0.995
+    rotation:
+      min_angle: -135   # degrees from 12 o'clock
+      max_angle: 135
+
+  toggles:
+    width: 32
+    height: 80
+    track_color: "#1a0a00"
+    track_border: "#3a2a1a"
+    slider_color: "#d4a574"
+    label_font_size: 8
+    label_letter_spacing: "0.25em"
+
+  display:
+    background: "#1a0a00"
+    border_color: "#3a2a1a"
+    border_width: 3
+    inset_shadow: "inset 0 4px 20px rgba(0,0,0,0.9), inset 0 0 60px rgba(0,0,0,0.5)"
+    scan_line_opacity: 0.04
+    scan_line_size: 4
+    waveform_stroke_width: 2
+    waveform_color: "#d4a574"
+    playhead_color: "#d4a574"
+    playhead_width: 1
+
+  assign_button:
+    default:
+      background: "#1a0a00"
+      border: "2px solid #d4a574"
+      color: "#d4a574"
+    armed:
+      animation: "pulseBrassGlow 0.8s ease-in-out infinite alternate"
+      glow: "0 0 12px #d4a574, 0 0 24px rgba(212,165,116,0.4)"
+
+  background_effects:
+    scan_lines:
+      opacity: 0.03
+      repeat: 4px
+    vignette:
+      color: "rgba(0,0,0,0.6)"
+      size: "ellipse at center"
+
+# ─────────────────────────────────────────────
+# Animations
+# ─────────────────────────────────────────────
+animations:
+  waveform:
+    fps: 60
+    playhead_cycle_seconds: "driven by rate parameter"
+    redraw: "requestAnimationFrame loop"
+  assign_armed_pulse:
+    duration: 0.8s
+    easing: ease-in-out
+    type: alternate
+    property: box-shadow
+    from: "none"
+    to: "0 0 12px #d4a574, 0 0 24px rgba(212,165,116,0.4)"
+
+# ─────────────────────────────────────────────
+# v3 layout notes
+# ─────────────────────────────────────────────
+# Bottom padding increased from 28px (v2) to 78px (v3).
+# Controls row (y=222, max height 90px) bottom edge = 312px.
+# Window height = 390px. Remaining space below = 78px.
+# This 78px zone holds: knob-label (~14px) + knob-value (~12px) + toggle labels
+# with generous margins above and below each text row (~20px breathing room).
+# ─────────────────────────────────────────────
