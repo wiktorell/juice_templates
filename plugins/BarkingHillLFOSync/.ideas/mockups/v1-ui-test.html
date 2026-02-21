@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BarkingHillLFOSync — UI Mockup v1</title>
+
+  <style>
+    /* ─── WebView constraints ─────────────────── */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: default;
+      overflow: hidden;
+      width: 600px;
+      height: 340px;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      color: #c49564;
+      /* Radial background gradient — warm deep amber centre */
+      background: radial-gradient(ellipse at 50% 40%, #4a3a2a 0%, #3a2810 40%, #2a1a0a 100%);
+      position: relative;
+    }
+
+    /* ─── Scan-line overlay ───────────────────── */
+    body::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 100;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 2px,
+        rgba(0,0,0,0.03) 2px,
+        rgba(0,0,0,0.03) 4px
+      );
+    }
+
+    /* ─── Corner vignette ────────────────────── */
+    body::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 99;
+      background: radial-gradient(ellipse at center,
+        transparent 50%,
+        rgba(0,0,0,0.55) 100%
+      );
+    }
+
+    /* ─── Layout wrapper ─────────────────────── */
+    .plugin-shell {
+      position: relative;
+      width: 600px;
+      height: 340px;
+      z-index: 1;
+    }
+
+    /* ══════════════════════════════════════════
+       WAVEFORM DISPLAY
+    ══════════════════════════════════════════ */
+    .display-housing {
+      position: absolute;
+      left: 15px;
+      top: 15px;
+      width: 570px;
+      height: 185px;
+      background: #0e0700;
+      border: 3px solid #3a2a1a;
+      border-radius: 4px;
+      box-shadow:
+        inset 0 4px 24px rgba(0,0,0,0.95),
+        inset 0 0 80px rgba(0,0,0,0.6),
+        0 2px 8px rgba(0,0,0,0.8);
+      overflow: hidden;
+    }
+
+    /* CRT scan lines over display */
+    .display-housing::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 10;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 2px,
+        rgba(0,0,0,0.04) 2px,
+        rgba(0,0,0,0.04) 4px
+      );
+    }
+
+    /* Display edge vignette */
+    .display-housing::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 11;
+      background: radial-gradient(ellipse at center,
+        transparent 55%,
+        rgba(0,0,0,0.7) 100%
+      );
+    }
+
+    #waveformCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .display-title {
+      position: absolute;
+      top: 10px;
+      left: 14px;
+      font-size: 11px;
+      font-weight: 300;
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      color: #c49564;
+      opacity: 0.7;
+      z-index: 12;
+      pointer-events: none;
+    }
+
+    /* ══════════════════════════════════════════
+       CONTROLS ROW
+    ══════════════════════════════════════════ */
+    .controls-row {
+      position: absolute;
+      top: 215px;
+      left: 0;
+      width: 600px;
+      height: 115px;
+      display: flex;
+      align-items: flex-start;
+      padding: 0 20px;
+      gap: 0;
+    }
+
+    /* ─── Knob group ─────────────────────────── */
+    .knob-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+
+    .knob-group.main {
+      width: 90px;
+      margin-right: 15px;
+    }
+
+    .knob-group.cc {
+      width: 60px;
+      margin-right: 0;
+    }
+
+    /* Knob element */
+    .knob {
+      border-radius: 50%;
+      position: relative;
+      cursor: ns-resize;
+      flex-shrink: 0;
+      background: radial-gradient(circle at 38% 35%,
+        #4a3820 0%,
+        #3a2a1a 30%,
+        #2f2015 60%,
+        #1a0a00 100%
+      );
+      box-shadow:
+        0 5px 15px rgba(0,0,0,0.85),
+        0 2px 6px rgba(0,0,0,0.7),
+        0 1px 2px rgba(0,0,0,0.9),
+        inset 0 1px 0 rgba(212,165,116,0.12),
+        inset 0 -1px 0 rgba(0,0,0,0.6);
+      transition: transform 0.06s ease;
+      will-change: transform;
+    }
+
+    .knob.main {
+      width: 90px;
+      height: 90px;
+    }
+
+    .knob.small {
+      width: 60px;
+      height: 60px;
+    }
+
+    .knob:hover {
+      transform: scale(1.005);
+    }
+
+    .knob:active {
+      transform: scale(0.995);
+    }
+
+    /* Outer ring groove */
+    .knob::before {
+      content: '';
+      position: absolute;
+      inset: 3px;
+      border-radius: 50%;
+      border: 1px solid rgba(0,0,0,0.5);
+      pointer-events: none;
+    }
+
+    /* Knob indicator track arc (decorative ring) */
+    .knob::after {
+      content: '';
+      position: absolute;
+      inset: 6px;
+      border-radius: 50%;
+      border: 1px solid rgba(212,165,116,0.08);
+      pointer-events: none;
+    }
+
+    /* Gold indicator bar */
+    .knob-indicator {
+      position: absolute;
+      width: 4px;
+      border-radius: 2px;
+      background: linear-gradient(to bottom, #e8c088 0%, #d4a574 50%, #b88040 100%);
+      box-shadow: 0 0 4px rgba(212,165,116,0.6), 0 0 8px rgba(212,165,116,0.3);
+      transform-origin: bottom center;
+      pointer-events: none;
+      bottom: 50%;
+      left: 50%;
+    }
+
+    .knob-indicator.main {
+      height: 35px;
+      margin-left: -2px;
+    }
+
+    .knob-indicator.small {
+      height: 22px;
+      margin-left: -2px;
+    }
+
+    .knob-label {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: #c49564;
+      text-align: center;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+      white-space: nowrap;
+    }
+
+    .knob-value {
+      font-size: 9px;
+      font-weight: 400;
+      letter-spacing: 0.15em;
+      color: #a07848;
+      text-align: center;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+      min-height: 12px;
+      white-space: nowrap;
+    }
+
+    /* ─── Toggle switches ────────────────────── */
+    .toggle-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+      margin-right: 18px;
+    }
+
+    .toggle-label-top,
+    .toggle-label-bot {
+      font-size: 8px;
+      font-weight: 500;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: #a07848;
+      text-align: center;
+      line-height: 1;
+    }
+
+    .toggle-switch {
+      width: 32px;
+      height: 80px;
+      background: #0e0700;
+      border: 2px solid #3a2a1a;
+      border-radius: 16px;
+      position: relative;
+      cursor: pointer;
+      box-shadow:
+        inset 0 3px 10px rgba(0,0,0,0.9),
+        inset 0 0 20px rgba(0,0,0,0.5),
+        0 2px 6px rgba(0,0,0,0.7);
+      transition: border-color 0.2s ease;
+    }
+
+    .toggle-switch:hover {
+      border-color: #4a3828;
+    }
+
+    /* The brass ball slider */
+    .toggle-ball {
+      position: absolute;
+      left: 3px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 38% 35%,
+        #f0d090 0%,
+        #d4a574 40%,
+        #a07030 80%,
+        #7a5020 100%
+      );
+      box-shadow:
+        0 3px 8px rgba(0,0,0,0.8),
+        0 1px 3px rgba(0,0,0,0.6),
+        inset 0 1px 0 rgba(255,230,160,0.4);
+      transition: top 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Off state: ball at bottom */
+    .toggle-ball {
+      top: calc(100% - 25px);
+    }
+
+    /* On state: ball at top */
+    .toggle-switch.active .toggle-ball {
+      top: 3px;
+    }
+
+    .toggle-group .knob-label {
+      font-size: 9px;
+    }
+
+    /* ─── CC Knob group ──────────────────────── */
+    .cc-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+      margin-right: 9px;
+      margin-top: 15px; /* vertically centre smaller knob in row */
+    }
+
+    /* ─── Assign button ──────────────────────── */
+    .assign-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+      margin-top: 22px;
+    }
+
+    .assign-btn {
+      width: 80px;
+      height: 36px;
+      background: #0e0700;
+      border: 2px solid #d4a574;
+      border-radius: 3px;
+      color: #d4a574;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      cursor: pointer;
+      position: relative;
+      box-shadow:
+        inset 0 2px 8px rgba(0,0,0,0.8),
+        0 2px 6px rgba(0,0,0,0.7);
+      transition:
+        box-shadow 0.15s ease,
+        background 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .assign-btn:hover {
+      background: #1a0e04;
+      box-shadow:
+        inset 0 2px 8px rgba(0,0,0,0.8),
+        0 2px 6px rgba(0,0,0,0.7),
+        0 0 6px rgba(212,165,116,0.25);
+    }
+
+    .assign-btn:active {
+      background: #0a0500;
+    }
+
+    .assign-btn.armed {
+      animation: pulseBrassGlow 0.8s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulseBrassGlow {
+      from {
+        box-shadow:
+          inset 0 2px 8px rgba(0,0,0,0.8),
+          0 2px 6px rgba(0,0,0,0.7);
+      }
+      to {
+        box-shadow:
+          inset 0 2px 8px rgba(0,0,0,0.8),
+          0 2px 6px rgba(0,0,0,0.7),
+          0 0 12px #d4a574,
+          0 0 24px rgba(212,165,116,0.4),
+          0 0 40px rgba(212,165,116,0.15);
+      }
+    }
+
+    .assign-label {
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: #a07848;
+      text-align: center;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+    }
+
+    /* ─── Arc indicator decoration on display ── */
+    .display-bottom-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(to right,
+        transparent 0%,
+        rgba(212,165,116,0.15) 30%,
+        rgba(212,165,116,0.25) 50%,
+        rgba(212,165,116,0.15) 70%,
+        transparent 100%
+      );
+      z-index: 12;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="plugin-shell">
+
+    <!-- ══ WAVEFORM DISPLAY ═════════════════════ -->
+    <div class="display-housing">
+      <canvas id="waveformCanvas"></canvas>
+      <div class="display-title">BARKING HILL LFO SYNC</div>
+      <div class="display-bottom-bar"></div>
+    </div>
+
+    <!-- ══ CONTROLS ROW ═════════════════════════ -->
+    <div class="controls-row">
+
+      <!-- Rate knob -->
+      <div class="knob-group main">
+        <div class="knob main" id="knobRate" data-id="rate" data-value="0.5">
+          <div class="knob-indicator main" id="indRate"></div>
+        </div>
+        <div class="knob-label">RATE</div>
+        <div class="knob-value" id="valRate">1.00 Hz</div>
+      </div>
+
+      <!-- Depth knob -->
+      <div class="knob-group main">
+        <div class="knob main" id="knobDepth" data-id="depth" data-value="0.75">
+          <div class="knob-indicator main" id="indDepth"></div>
+        </div>
+        <div class="knob-label">DEPTH</div>
+        <div class="knob-value" id="valDepth">+50%</div>
+      </div>
+
+      <!-- Waveform knob -->
+      <div class="knob-group main" style="margin-right: 23px;">
+        <div class="knob main" id="knobWaveform" data-id="waveform" data-value="0">
+          <div class="knob-indicator main" id="indWaveform"></div>
+        </div>
+        <div class="knob-label">WAVEFORM</div>
+        <div class="knob-value" id="valWaveform">SINE</div>
+      </div>
+
+      <!-- Sync toggle -->
+      <div class="toggle-group" id="toggleGroupSync">
+        <div class="toggle-label-top" id="syncLabelTop">CLOCK</div>
+        <div class="toggle-switch" id="syncToggle">
+          <div class="toggle-ball"></div>
+        </div>
+        <div class="toggle-label-bot" id="syncLabelBot">FREE</div>
+        <div class="knob-label" style="margin-top:3px; font-size:9px;">SYNC</div>
+      </div>
+
+      <!-- Retrigger toggle -->
+      <div class="toggle-group" id="toggleGroupRetrig" style="margin-right: 16px;">
+        <div class="toggle-label-top">ON</div>
+        <div class="toggle-switch" id="retrigToggle">
+          <div class="toggle-ball"></div>
+        </div>
+        <div class="toggle-label-bot">OFF</div>
+        <div class="knob-label" style="margin-top:3px; font-size:9px;">RETRIG</div>
+      </div>
+
+      <!-- CC Number knob -->
+      <div class="cc-group">
+        <div class="knob small" id="knobCC" data-id="cc_number" data-value="0">
+          <div class="knob-indicator small" id="indCC"></div>
+        </div>
+        <div class="knob-label" style="font-size:9px;">CC</div>
+        <div class="knob-value" id="valCC">CC 1</div>
+      </div>
+
+      <!-- Assign button -->
+      <div class="assign-group">
+        <button class="assign-btn" id="assignBtn">ASSIGN</button>
+        <div class="assign-label" id="assignLabel">DISARMED</div>
+      </div>
+
+    </div><!-- /.controls-row -->
+
+  </div><!-- /.plugin-shell -->
+
+  <script>
+    // ════════════════════════════════════════════
+    // Mock JUCE backend
+    // ════════════════════════════════════════════
+    window.Juce = {
+      getSliderState: (id) => ({
+        normalisedValue: 0.5,
+        valueChangedEvent: { addListener: (fn) => {} }
+      }),
+      getToggleState: (id) => ({
+        value: false,
+        valueChangedEvent: { addListener: (fn) => {} }
+      }),
+      getComboBoxState: (id) => ({
+        selectedId: 0,
+        valueChangedEvent: { addListener: (fn) => {} }
+      })
+    };
+
+    // Disable context menu
+    document.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      return false;
+    });
+
+    // ════════════════════════════════════════════
+    // Plugin state
+    // ════════════════════════════════════════════
+    const state = {
+      rate:       1.0,      // Hz in free mode
+      depth:      50.0,     // -100 to +100
+      waveform:   0,        // 0-4 index
+      sync:       false,
+      retrigger:  false,
+      cc_number:  1,        // 1-127
+      assign:     false,
+      playhead:   0,        // 0-1 normalised phase
+    };
+
+    const WAVEFORMS = ['SINE', 'TRIANGLE', 'SQUARE', 'SAW UP', 'SAW DOWN'];
+    const SUBDIVISIONS = [
+      '4 BARS', '2 BARS', '1 BAR',
+      '1/2', '1/2T', '1/4', '1/4T',
+      '1/8', '1/8T', '1/16', '1/16T',
+      '1/32', '1/32T'
+    ];
+    let subdivisionIndex = 5; // default 1/4
+
+    // ════════════════════════════════════════════
+    // Knob rotation helpers
+    // angle range: -135° (min) to +135° (max)
+    // ════════════════════════════════════════════
+    const MIN_ANGLE = -135;
+    const MAX_ANGLE =  135;
+
+    function normToAngle(norm) {
+      return MIN_ANGLE + norm * (MAX_ANGLE - MIN_ANGLE);
+    }
+
+    function setIndicator(indicatorEl, angle) {
+      // Indicator bar: origin at bottom-centre, rotates around knob centre.
+      // CSS transform-origin is 'bottom center'.
+      // The bar sits with its bottom at 50% of the knob height.
+      indicatorEl.style.transform = `rotate(${angle}deg)`;
+    }
+
+    // ─── Rate knob display
+    function updateRateDisplay() {
+      const el = document.getElementById('valRate');
+      if (state.sync) {
+        el.textContent = SUBDIVISIONS[subdivisionIndex];
+      } else {
+        el.textContent = state.rate.toFixed(2) + ' HZ';
+      }
+    }
+
+    // ─── Depth knob — bipolar, centre = 0%
+    // 0% maps to angle 0 (12 o'clock)
+    function depthToNorm(d) { return (d + 100) / 200; } // -100→0, 0→0.5, 100→1
+    function normToDepth(n) { return n * 200 - 100; }
+    function depthToAngle(d) { return d / 100 * 135; } // -100→-135, 0→0, 100→135
+
+    // ─── Waveform knob — 5 steps
+    function waveformToNorm(idx) { return idx / 4; }
+    function normToWaveformIdx(n) { return Math.round(n * 4); }
+
+    // ─── CC knob — integer 1-127
+    function ccToNorm(cc) { return (cc - 1) / 126; }
+    function normToCC(n) { return Math.round(n * 126) + 1; }
+
+    // ────────────────────────────────────────────
+    // Initialise knob indicators
+    // ────────────────────────────────────────────
+    function initKnobs() {
+      // Rate: default 1Hz maps to norm=0.5 in free range (0.1-10 linear)
+      const rateNorm = (state.rate - 0.1) / (10 - 0.1);
+      setIndicator(document.getElementById('indRate'), normToAngle(rateNorm));
+
+      // Depth: 50% → angle = +67.5°
+      setIndicator(document.getElementById('indDepth'), depthToAngle(state.depth));
+
+      // Waveform: 0 → -135°
+      setIndicator(document.getElementById('indWaveform'), normToAngle(waveformToNorm(state.waveform)));
+
+      // CC: 1 → -135°
+      setIndicator(document.getElementById('indCC'), normToAngle(ccToNorm(state.cc_number)));
+
+      updateRateDisplay();
+      document.getElementById('valDepth').textContent =
+        (state.depth >= 0 ? '+' : '') + Math.round(state.depth) + '%';
+      document.getElementById('valWaveform').textContent = WAVEFORMS[state.waveform];
+      document.getElementById('valCC').textContent = 'CC ' + state.cc_number;
+    }
+
+    // ════════════════════════════════════════════
+    // Knob drag interaction
+    // ════════════════════════════════════════════
+    let activeDrag = null;
+
+    function setupKnob(knobEl, opts) {
+      // opts: { onNorm(n), getNorm(), onRelease? }
+      knobEl.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        activeDrag = {
+          knob: knobEl,
+          startY: e.clientY,
+          startNorm: opts.getNorm(),
+          opts
+        };
+      });
+    }
+
+    document.addEventListener('mousemove', (e) => {
+      if (!activeDrag) return;
+      const dy = activeDrag.startY - e.clientY; // up = increase
+      const sensitivity = e.shiftKey ? 0.002 : 0.008;
+      let norm = Math.max(0, Math.min(1, activeDrag.startNorm + dy * sensitivity));
+      activeDrag.opts.onNorm(norm);
+    });
+
+    document.addEventListener('mouseup', () => {
+      activeDrag = null;
+    });
+
+    // ─── Rate knob
+    setupKnob(document.getElementById('knobRate'), {
+      getNorm: () => {
+        if (state.sync) return subdivisionIndex / 12;
+        return (state.rate - 0.1) / (10 - 0.1);
+      },
+      onNorm: (n) => {
+        if (state.sync) {
+          subdivisionIndex = Math.round(n * 12);
+        } else {
+          state.rate = 0.1 + n * (10 - 0.1);
+        }
+        const angle = normToAngle(n);
+        setIndicator(document.getElementById('indRate'), angle);
+        updateRateDisplay();
+        console.log(`rate changed: ${state.rate.toFixed(2)} Hz / subdiv ${SUBDIVISIONS[subdivisionIndex]}`);
+      }
+    });
+
+    // ─── Depth knob (bipolar)
+    setupKnob(document.getElementById('knobDepth'), {
+      getNorm: () => depthToNorm(state.depth),
+      onNorm: (n) => {
+        state.depth = normToDepth(n);
+        const angle = depthToAngle(state.depth);
+        setIndicator(document.getElementById('indDepth'), angle);
+        document.getElementById('valDepth').textContent =
+          (state.depth >= 0 ? '+' : '') + Math.round(state.depth) + '%';
+        console.log(`depth changed: ${state.depth.toFixed(1)}%`);
+      }
+    });
+
+    // ─── Waveform knob (stepped)
+    setupKnob(document.getElementById('knobWaveform'), {
+      getNorm: () => waveformToNorm(state.waveform),
+      onNorm: (n) => {
+        state.waveform = normToWaveformIdx(n);
+        const snapped = waveformToNorm(state.waveform);
+        setIndicator(document.getElementById('indWaveform'), normToAngle(snapped));
+        document.getElementById('valWaveform').textContent = WAVEFORMS[state.waveform];
+        console.log(`waveform changed: ${WAVEFORMS[state.waveform]}`);
+      }
+    });
+
+    // ─── CC knob (stepped integer 1-127)
+    setupKnob(document.getElementById('knobCC'), {
+      getNorm: () => ccToNorm(state.cc_number),
+      onNorm: (n) => {
+        state.cc_number = normToCC(n);
+        setIndicator(document.getElementById('indCC'), normToAngle(ccToNorm(state.cc_number)));
+        document.getElementById('valCC').textContent = 'CC ' + state.cc_number;
+        console.log(`cc_number changed: ${state.cc_number}`);
+      }
+    });
+
+    // ════════════════════════════════════════════
+    // Toggle switches
+    // ════════════════════════════════════════════
+    document.getElementById('syncToggle').addEventListener('click', () => {
+      state.sync = !state.sync;
+      document.getElementById('syncToggle').classList.toggle('active', state.sync);
+      updateRateDisplay();
+      console.log(`sync changed: ${state.sync ? 'CLOCK' : 'FREE'}`);
+    });
+
+    document.getElementById('retrigToggle').addEventListener('click', () => {
+      state.retrigger = !state.retrigger;
+      document.getElementById('retrigToggle').classList.toggle('active', state.retrigger);
+      console.log(`retrigger changed: ${state.retrigger ? 'ON' : 'OFF'}`);
+    });
+
+    // ════════════════════════════════════════════
+    // Assign button
+    // ════════════════════════════════════════════
+    document.getElementById('assignBtn').addEventListener('click', () => {
+      state.assign = !state.assign;
+      const btn = document.getElementById('assignBtn');
+      const lbl = document.getElementById('assignLabel');
+      btn.classList.toggle('armed', state.assign);
+      lbl.textContent = state.assign ? 'ARMED' : 'DISARMED';
+      console.log(`assign: ${state.assign ? 'ARMED' : 'DISARMED'}`);
+    });
+
+    // ════════════════════════════════════════════
+    // Canvas waveform display
+    // ════════════════════════════════════════════
+    const canvas = document.getElementById('waveformCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      const housing = canvas.parentElement;
+      canvas.width  = housing.clientWidth;
+      canvas.height = housing.clientHeight;
+    }
+
+    // ─── Waveform generators (t = 0..1, returns -1..1)
+    function sineWave(t)     { return Math.sin(2 * Math.PI * t); }
+    function triangleWave(t) { return 1 - 4 * Math.abs(Math.round(t - 0.25) - (t - 0.25)); }
+    function squareWave(t)   { return Math.sin(2 * Math.PI * t) >= 0 ? 1 : -1; }
+    function sawUpWave(t)    { return 2 * (t - Math.floor(t + 0.5)); }
+    function sawDownWave(t)  { return -sawUpWave(t); }
+
+    const waveFunctions = [sineWave, triangleWave, squareWave, sawUpWave, sawDownWave];
+
+    let lastTimestamp = null;
+
+    function drawWaveform(timestamp) {
+      if (!lastTimestamp) lastTimestamp = timestamp;
+      const delta = (timestamp - lastTimestamp) / 1000; // seconds
+      lastTimestamp = timestamp;
+
+      const rate = state.sync ? (1 / 2) : state.rate; // use 0.5Hz placeholder for sync
+      state.playhead = (state.playhead + delta * rate) % 1;
+
+      const W = canvas.width;
+      const H = canvas.height;
+
+      ctx.clearRect(0, 0, W, H);
+
+      // ─── Background (dark inset, already set by CSS) ─
+      // Just draw the waveform
+
+      // ─── Grid lines (faint gold) ─────────────────
+      ctx.strokeStyle = 'rgba(212,165,116,0.07)';
+      ctx.lineWidth = 1;
+      // Horizontal centre line
+      ctx.beginPath();
+      ctx.moveTo(0, H / 2);
+      ctx.lineTo(W, H / 2);
+      ctx.stroke();
+      // Horizontal quarter lines
+      [0.25, 0.75].forEach(f => {
+        ctx.beginPath();
+        ctx.moveTo(0, H * f);
+        ctx.lineTo(W, H * f);
+        ctx.stroke();
+      });
+      // Vertical quarter lines
+      [0.25, 0.5, 0.75].forEach(f => {
+        ctx.beginPath();
+        ctx.moveTo(W * f, 0);
+        ctx.lineTo(W * f, H);
+        ctx.stroke();
+      });
+
+      // ─── Waveform glow pass (blurred, wider) ─────
+      const waveFunc = waveFunctions[state.waveform];
+      const PAD_V = 22; // vertical padding inside display
+      const amplitude = (H / 2) - PAD_V;
+
+      function buildWavePath() {
+        ctx.beginPath();
+        for (let px = 0; px < W; px++) {
+          const t = px / W;
+          const y = waveFunc(t);
+          const cy = H / 2 - y * amplitude;
+          if (px === 0) ctx.moveTo(px, cy);
+          else ctx.lineTo(px, cy);
+        }
+      }
+
+      // Glow layer
+      ctx.save();
+      ctx.filter = 'blur(3px)';
+      ctx.strokeStyle = 'rgba(212,165,116,0.25)';
+      ctx.lineWidth = 5;
+      ctx.lineJoin = 'round';
+      buildWavePath();
+      ctx.stroke();
+      ctx.restore();
+
+      // Glow layer 2
+      ctx.save();
+      ctx.filter = 'blur(1px)';
+      ctx.strokeStyle = 'rgba(212,165,116,0.45)';
+      ctx.lineWidth = 3;
+      ctx.lineJoin = 'round';
+      buildWavePath();
+      ctx.stroke();
+      ctx.restore();
+
+      // Primary waveform line (sharp)
+      ctx.strokeStyle = '#d4a574';
+      ctx.lineWidth = 2;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      buildWavePath();
+      ctx.stroke();
+
+      // ─── Playhead ────────────────────────────────
+      const phX = state.playhead * W;
+      // Playhead glow
+      const grad = ctx.createLinearGradient(phX, 0, phX, H);
+      grad.addColorStop(0, 'rgba(212,165,116,0)');
+      grad.addColorStop(0.3, 'rgba(212,165,116,0.5)');
+      grad.addColorStop(0.5, 'rgba(212,165,116,0.8)');
+      grad.addColorStop(0.7, 'rgba(212,165,116,0.5)');
+      grad.addColorStop(1, 'rgba(212,165,116,0)');
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(phX, 0);
+      ctx.lineTo(phX, H);
+      ctx.stroke();
+      // Playhead sharp line
+      ctx.strokeStyle = 'rgba(212,165,116,0.9)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(phX, 0);
+      ctx.lineTo(phX, H);
+      ctx.stroke();
+
+      // ─── Playhead dot on waveform ────────────────
+      const phT = state.playhead;
+      const phY = H / 2 - waveFunc(phT) * amplitude;
+      ctx.beginPath();
+      ctx.arc(phX, phY, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#f0d090';
+      ctx.fill();
+      ctx.strokeStyle = '#d4a574';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // ─── Waveform name watermark ─────────────────
+      ctx.fillStyle = 'rgba(212,165,116,0.12)';
+      ctx.font = '500 52px Helvetica Neue, Helvetica, Arial, sans-serif';
+      ctx.letterSpacing = '0.2em';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(WAVEFORMS[state.waveform], W / 2, H / 2);
+
+      requestAnimationFrame(drawWaveform);
+    }
+
+    // ════════════════════════════════════════════
+    // Boot
+    // ════════════════════════════════════════════
+    document.addEventListener('DOMContentLoaded', () => {
+      resizeCanvas();
+      initKnobs();
+      requestAnimationFrame(drawWaveform);
+    });
+  </script>
+</body>
+</html>
