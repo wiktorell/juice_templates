@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include "BinaryData.h"
 
 //==============================================================================
 BarkingHillLFOSyncAudioProcessorEditor::BarkingHillLFOSyncAudioProcessorEditor (
@@ -110,21 +111,8 @@ BarkingHillLFOSyncAudioProcessorEditor::~BarkingHillLFOSyncAudioProcessorEditor(
 //==============================================================================
 void BarkingHillLFOSyncAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    // Stage 1 placeholder: dark brown background matching v7 mockup aesthetic.
-    // WebView fills the entire component in Stage 3 — this paint() backdrop
-    // is visible during WebView loading or if the resource provider returns 404.
-    g.fillAll (juce::Colour (0xff1a0a00));   // Deep dark brown (#1a0a00)
-
-    g.setColour (juce::Colours::white.withAlpha (0.6f));
-    g.setFont (18.0f);
-    g.drawFittedText ("LFO Sync - Stage 1",
-                      getLocalBounds(),
-                      juce::Justification::centred, 1);
-
-    g.setFont (13.0f);
-    g.drawFittedText ("8 parameters implemented (7 user + mod_output system)",
-                      getLocalBounds().reduced (20).removeFromBottom (30),
-                      juce::Justification::centred, 1);
+    // WebView fills the entire component — dark brown backdrop visible during load.
+    g.fillAll (juce::Colour (0xff1a0a00));
 }
 
 void BarkingHillLFOSyncAudioProcessorEditor::resized()
@@ -157,35 +145,42 @@ void BarkingHillLFOSyncAudioProcessorEditor::resized()
 std::optional<juce::WebBrowserComponent::Resource>
 BarkingHillLFOSyncAudioProcessorEditor::getResource (const juce::String& url)
 {
-    // Stage 1: No BinaryData available yet (UI resources added in Stage 3).
-    // Returning nullopt causes the WebView to display a blank/error page.
-    // This is expected behaviour at Stage 1 — the plugin compiles and runs,
-    // the parameter APVTS is fully functional, but the WebView UI is not yet populated.
+    auto makeVector = [] (const char* data, int size) -> std::vector<std::byte>
+    {
+        return std::vector<std::byte> (
+            reinterpret_cast<const std::byte*> (data),
+            reinterpret_cast<const std::byte*> (data) + size
+        );
+    };
 
-    // Stage 3 implementation will replace this stub with:
-    //
-    //   auto makeVector = [] (const char* data, int size) -> std::vector<std::byte> {
-    //       return std::vector<std::byte> (
-    //           reinterpret_cast<const std::byte*> (data),
-    //           reinterpret_cast<const std::byte*> (data) + size);
-    //   };
-    //
-    //   if (url == "/" || url == "/index.html")
-    //       return juce::WebBrowserComponent::Resource {
-    //           makeVector (BinaryData::index_html, BinaryData::index_htmlSize),
-    //           juce::String ("text/html") };
-    //
-    //   if (url == "/js/juce/index.js")
-    //       return juce::WebBrowserComponent::Resource {
-    //           makeVector (BinaryData::index_js, BinaryData::index_jsSize),
-    //           juce::String ("text/javascript") };
-    //
-    //   if (url == "/js/juce/check_native_interop.js")
-    //       return juce::WebBrowserComponent::Resource {
-    //           makeVector (BinaryData::check_native_interop_js,
-    //                       BinaryData::check_native_interop_jsSize),
-    //           juce::String ("text/javascript") };
+    // ── index.html ────────────────────────────────────────────────
+    if (url == "/" || url == "/index.html")
+    {
+        return juce::WebBrowserComponent::Resource {
+            makeVector (BinaryData::index_html, BinaryData::index_htmlSize),
+            juce::String ("text/html")
+        };
+    }
 
-    juce::ignoreUnused (url);
+    // ── JUCE bridge: index.js ─────────────────────────────────────
+    if (url == "/js/juce/index.js")
+    {
+        return juce::WebBrowserComponent::Resource {
+            makeVector (BinaryData::index_js, BinaryData::index_jsSize),
+            juce::String ("text/javascript")
+        };
+    }
+
+    // ── JUCE bridge: check_native_interop.js (REQUIRED) ──────────
+    if (url == "/js/juce/check_native_interop.js")
+    {
+        return juce::WebBrowserComponent::Resource {
+            makeVector (BinaryData::check_native_interop_js,
+                        BinaryData::check_native_interop_jsSize),
+            juce::String ("text/javascript")
+        };
+    }
+
+    // ── 404 — resource not found ──────────────────────────────────
     return std::nullopt;
 }

@@ -57,18 +57,18 @@ target_link_libraries(BarkingHillLFOSync
 # ── Generate JuceHeader.h — MUST be after target_link_libraries (pattern #1) ─
 juce_generate_juce_header(BarkingHillLFOSync)
 
-# ── WebView UI binary data (uncommented by gui-agent in Stage 3) ──────────────
-# juce_add_binary_data(BarkingHillLFOSync_UIResources
-#     SOURCES
-#         Source/ui/public/index.html
-#         Source/ui/public/js/juce/index.js
-#         Source/ui/public/js/juce/check_native_interop.js
-# )
-#
-# target_link_libraries(BarkingHillLFOSync
-#     PRIVATE
-#         BarkingHillLFOSync_UIResources
-# )
+# ── WebView UI binary data ────────────────────────────────────────────────────
+juce_add_binary_data(BarkingHillLFOSync_UIResources
+    SOURCES
+        Source/ui/public/index.html
+        Source/ui/public/js/juce/index.js
+        Source/ui/public/js/juce/check_native_interop.js
+)
+
+target_link_libraries(BarkingHillLFOSync
+    PRIVATE
+        BarkingHillLFOSync_UIResources
+)
 
 # ── Compile definitions ───────────────────────────────────────────────────────
 target_compile_definitions(BarkingHillLFOSync
