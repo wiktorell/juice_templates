@@ -168,6 +168,11 @@ void BarkingHillLFOSyncAudioProcessor::processBlock (juce::AudioBuffer<float>& b
 {
     juce::ScopedNoDenormals noDenormals;
 
+    // Guard: ensure sampleRate is valid before computing phase increment.
+    // Prevents division by zero if host calls processBlock before prepareToPlay.
+    if (currentSampleRate <= 0.0)
+        return;
+
     // ── Phase 3.1 + 3.2: LFO Core + MIDI CC Output + Sync + Retrigger ────────
     // Audio buffer is NOT modified — BarkingHillLFOSync is a modulation utility.
 
@@ -178,6 +183,9 @@ void BarkingHillLFOSyncAudioProcessor::processBlock (juce::AudioBuffer<float>& b
     const int   ccNumber    = static_cast<int> (parameters.getRawParameterValue ("cc_number")->load());
     const bool  syncEnabled = parameters.getRawParameterValue ("sync")->load() >= 0.5f;
     const bool  retrigEnabled = parameters.getRawParameterValue ("retrigger")->load() >= 0.5f;
+
+    // assign parameter is UI-only (no DSP impact) — controls animation in PluginEditor
+    // parameters.getRawParameterValue("assign") not read here
 
     const int   numSamples = buffer.getNumSamples();
 

@@ -13,11 +13,10 @@
  * Parameters:     7 (rate, depth, waveform, sync, retrigger, cc_number, assign)
  *                 + 1 system parameter (mod_output, runtime-only)
  *
- * Stage 1: Foundation + Shell
- * - APVTS with all 7 parameters + mod_output system parameter
- * - Stereo input/output bus configuration
- * - State management (save/load)
- * - Pass-through audio (DSP implemented in Stage 2)
+ * Stage 2: DSP Complete (all phases)
+ * - Phase 3.1: LFO oscillator (5 waveforms), MIDI CC output, mod_output automation
+ * - Phase 3.2: MIDI clock sync (AudioPlayHead, 13 subdivisions), phase retrigger
+ * - Phase 3.3: Edge case hardening, state persistence verified
  */
 class BarkingHillLFOSyncAudioProcessor : public juce::AudioProcessor
 {
