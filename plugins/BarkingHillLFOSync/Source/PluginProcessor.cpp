@@ -143,33 +143,116 @@ bool BarkingHillLFOSyncAudioProcessor::isBusesLayoutSupported (const BusesLayout
     return true;
 }
 
+// ── Phase 3.2: 13-step subdivision table for MIDI clock sync ─────────────────
+// Maps subdivision index [0, 12] to duration in quarter-note units.
+// Used to derive LFO phase from DAW ppqPosition when sync=true.
+static const double kSubdivisionQN[13] = {
+    16.0,           // 0:  4 BAR
+    8.0,            // 1:  2 BAR
+    4.0,            // 2:  1 BAR
+    2.0,            // 3:  1/2
+    4.0 / 3.0,      // 4:  1/2T (triplet half)
+    1.0,            // 5:  1/4
+    2.0 / 3.0,      // 6:  1/4T (triplet quarter)
+    0.5,            // 7:  1/8
+    1.0 / 3.0,      // 8:  1/8T
+    0.25,           // 9:  1/16
+    1.0 / 6.0,      // 10: 1/16T
+    0.125,          // 11: 1/32
+    1.0 / 12.0      // 12: 1/32T
+};
+
 //==============================================================================
 void BarkingHillLFOSyncAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                                                       juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
 
-    // ── Phase 3.1: LFO Core + MIDI CC Output ─────────────────────────────────
+    // ── Phase 3.1 + 3.2: LFO Core + MIDI CC Output + Sync + Retrigger ────────
     // Audio buffer is NOT modified — BarkingHillLFOSync is a modulation utility.
 
     // Step 1: Read parameters (atomic loads — real-time safe)
-    const float rateHz    = parameters.getRawParameterValue ("rate")->load();
-    const float depthPct  = parameters.getRawParameterValue ("depth")->load();
+    const float rateHz      = parameters.getRawParameterValue ("rate")->load();
+    const float depthPct    = parameters.getRawParameterValue ("depth")->load();
     const int   waveformIdx = static_cast<int> (parameters.getRawParameterValue ("waveform")->load() + 0.5f);
-    const int   ccNumber  = static_cast<int> (parameters.getRawParameterValue ("cc_number")->load());
+    const int   ccNumber    = static_cast<int> (parameters.getRawParameterValue ("cc_number")->load());
+    const bool  syncEnabled = parameters.getRawParameterValue ("sync")->load() >= 0.5f;
+    const bool  retrigEnabled = parameters.getRawParameterValue ("retrigger")->load() >= 0.5f;
 
     const int   numSamples = buffer.getNumSamples();
 
-    // Step 2: Advance lfoPhase by one buffer's worth of phase (FREE mode only in Phase 3.1)
-    // phaseInc represents how many full cycles occur over the block duration.
-    const float phaseInc = rateHz / static_cast<float> (currentSampleRate) * static_cast<float> (numSamples);
-    lfoPhase += phaseInc;
+    // Step 2: [NEW Phase 3.2] AudioPlayHead sync query
+    // When sync=true and DAW transport is playing, derive lfoPhase from ppqPosition.
+    // This keeps the LFO locked to the transport after scrubs and loop jumps.
+    bool phaseAdvanced = false;
 
-    // Step 3: Wrap phase into [0.0, 1.0)
+    if (syncEnabled)
+    {
+        if (auto* playHead = getPlayHead())
+        {
+            if (auto pos = playHead->getPosition())
+            {
+                const double bpm       = pos->getBpm().hasValue()         ? *pos->getBpm()         : 120.0;
+                const double ppq       = pos->getPpqPosition().hasValue() ? *pos->getPpqPosition() : 0.0;
+                const bool   isPlaying = pos->getIsPlaying();
+
+                if (isPlaying && bpm > 0.0)
+                {
+                    // Map rate Hz [0.1, 10.0] → normalised [0, 1] → subdivision index [0, 12]
+                    const float normRate  = (rateHz - 0.1f) / 9.9f;
+                    const int   subdivIdx = juce::jlimit (0, 12, static_cast<int> (std::round (normRate * 12.0f)));
+
+                    const double subdivQN = kSubdivisionQN[subdivIdx];
+
+                    // Derive normalised phase [0, 1) from ppqPosition.
+                    // fmod() keeps phase correct after transport scrub and loop jumps.
+                    const double rawPhase = std::fmod (ppq, subdivQN) / subdivQN;
+                    lfoPhase = static_cast<float> (rawPhase);
+
+                    // Phase has been set from transport — skip free-mode advance below.
+                    phaseAdvanced = true;
+                }
+                // If not playing: freeze phase at current value (phaseAdvanced stays false,
+                // but we also skip free advance to hold position during transport stop).
+                else if (!isPlaying)
+                {
+                    phaseAdvanced = true;  // Freeze: don't advance while transport is stopped
+                }
+            }
+        }
+    }
+
+    // Step 3: [NEW Phase 3.2] MIDI note-on retrigger scan
+    // Runs AFTER sync phase derivation so retrigger overrides sync on note-on.
+    if (retrigEnabled)
+    {
+        for (const auto metadata : midiMessages)
+        {
+            const auto msg = metadata.getMessage();
+            if (msg.isNoteOn())
+            {
+                lfoPhase = 0.0f;
+                break;  // Only retrigger on first note-on in buffer
+            }
+        }
+    }
+
+    // Step 4: Free-mode phase advance (only when sync has NOT locked the phase)
+    // phaseInc represents how many full cycles occur over the block duration.
+    if (!phaseAdvanced)
+    {
+        const float phaseInc = rateHz / static_cast<float> (currentSampleRate) * static_cast<float> (numSamples);
+        lfoPhase += phaseInc;
+    }
+
+    // Step 5: Wrap phase into [0.0, 1.0)
+    // Guard negative phase (can occur with pre-roll ppqPosition in sync mode)
+    if (lfoPhase < 0.0f)
+        lfoPhase += 1.0f - std::floor (lfoPhase);
     if (lfoPhase >= 1.0f)
         lfoPhase -= std::floor (lfoPhase);
 
-    // Step 4: Compute LFO output from waveform formula (phase p in [0.0, 1.0))
+    // Step 6: Compute LFO output from waveform formula (phase p in [0.0, 1.0))
     float lfoOutput = 0.0f;
     switch (waveformIdx)
     {
@@ -194,23 +277,23 @@ void BarkingHillLFOSyncAudioProcessor::processBlock (juce::AudioBuffer<float>& b
             break;
     }
 
-    // Step 5: Apply bipolar depth scaling
+    // Step 7: Apply bipolar depth scaling
     // depthPct range: [-100, +100] → scale factor [-1.0, +1.0]
     // scaledLFO range: [-1.0, +1.0]
     const float scaledLFO = lfoOutput * (depthPct / 100.0f);
 
-    // Step 6: Generate MIDI CC output (one CC event per buffer at offset 0)
+    // Step 8: Generate MIDI CC output (one CC event per buffer at offset 0)
     // Map scaledLFO [-1, +1] → MIDI CC [0, 127]
     const int ccVal = juce::jlimit (0, 127, static_cast<int> ((scaledLFO + 1.0f) * 63.5f));
     midiMessages.addEvent (juce::MidiMessage::controllerEvent (1, ccNumber, ccVal), 0);
 
-    // Step 7: Update mod_output automation parameter (normalised [0, 1])
+    // Step 9: Update mod_output automation parameter (normalised [0, 1])
     // 0.5 = LFO at centre (scaledLFO = 0.0), 0.0 = minimum, 1.0 = maximum
     const float normalisedLFO = (scaledLFO + 1.0f) * 0.5f;
     auto* modOutParam = parameters.getParameter ("mod_output");
     modOutParam->setValueNotifyingHost (normalisedLFO);
 
-    // Step 8: Audio passthrough — buffer is left completely unmodified.
+    // Step 10: Audio passthrough — buffer is left completely unmodified.
     // BarkingHillLFOSync is a modulation utility; audio passes through unchanged.
     juce::ignoreUnused (buffer);
 }
