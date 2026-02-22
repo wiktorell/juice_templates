@@ -67,6 +67,13 @@ private:
     // Parameter layout factory — called in initialiser list
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
+    // LFO State (Phase 3.1)
+    // Phase accumulator: [0.0, 1.0), advanced each processBlock in FREE mode
+    float lfoPhase = 0.0f;
+
+    // Sample rate stored in prepareToPlay for phase increment calculation
+    double currentSampleRate = 44100.0;
+
     // mod_output system parameter pointer (runtime-only, not in layout save/load)
     // Accessed via parameters.getParameter("mod_output") in processBlock
     // setValueNotifyingHost() called each processBlock from audio thread (valid per JUCE docs)
