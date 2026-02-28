@@ -76,15 +76,6 @@ BarkingHillLFOSyncAudioProcessor::createParameterLayout()
         1.0f
     ));
 
-    // ── assign ────────────────────────────────────────────────────────────────
-    // Bool: false = DISARMED (default), true = ARMED
-    // UI-only state — arms workflow guide animation; no DSP impact.
-    // Resets to false on state restore (default behaviour via APVTS).
-    params.push_back (std::make_unique<juce::AudioParameterBool> (
-        juce::ParameterID { "assign", 1 },
-        "Assign",
-        false
-    ));
 
     // ── mod_output (system parameter) ─────────────────────────────────────────
     // Float: 0.0 – 1.0 (normalised LFO output, 0.5 = centre for bipolar)
@@ -103,9 +94,7 @@ BarkingHillLFOSyncAudioProcessor::createParameterLayout()
 
 //==============================================================================
 BarkingHillLFOSyncAudioProcessor::BarkingHillLFOSyncAudioProcessor()
-    : AudioProcessor (BusesProperties()
-                        .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
-                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true))
+    : AudioProcessor (BusesProperties())   // MIDI FX — no audio buses
     , parameters (*this, nullptr, "Parameters", createParameterLayout())
 {
 }
@@ -133,13 +122,8 @@ void BarkingHillLFOSyncAudioProcessor::releaseResources()
 
 bool BarkingHillLFOSyncAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
-    // Require stereo in + stereo out (audio passthrough utility plugin)
-    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
-        return false;
-
-    if (layouts.getMainInputChannelSet() != juce::AudioChannelSet::stereo())
-        return false;
-
+    // MIDI FX — no audio buses
+    juce::ignoreUnused (layouts);
     return true;
 }
 
@@ -183,9 +167,6 @@ void BarkingHillLFOSyncAudioProcessor::processBlock (juce::AudioBuffer<float>& b
     const int   ccNumber    = static_cast<int> (parameters.getRawParameterValue ("cc_number")->load());
     const bool  syncEnabled = parameters.getRawParameterValue ("sync")->load() >= 0.5f;
     const bool  retrigEnabled = parameters.getRawParameterValue ("retrigger")->load() >= 0.5f;
-
-    // assign parameter is UI-only (no DSP impact) — controls animation in PluginEditor
-    // parameters.getRawParameterValue("assign") not read here
 
     const int   numSamples = buffer.getNumSamples();
 
@@ -331,7 +312,7 @@ void BarkingHillLFOSyncAudioProcessor::setStateInformation (const void* data, in
 
     // Note: mod_output will be restored to saved value, but it is overwritten
     // every processBlock by setValueNotifyingHost(). Effectively runtime-only.
-    // assign parameter restores to default (false) via APVTS default mechanism.
+    // mod_output will be overwritten every processBlock regardless of saved value.
 }
 
 //==============================================================================

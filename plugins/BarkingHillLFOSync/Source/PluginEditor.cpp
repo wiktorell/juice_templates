@@ -22,7 +22,6 @@ BarkingHillLFOSyncAudioProcessorEditor::BarkingHillLFOSyncAudioProcessorEditor (
     syncRelay      = std::make_unique<juce::WebToggleButtonRelay> ("sync");
     retriggerRelay = std::make_unique<juce::WebToggleButtonRelay> ("retrigger");
     ccNumberRelay  = std::make_unique<juce::WebSliderRelay>       ("cc_number");
-    assignRelay    = std::make_unique<juce::WebToggleButtonRelay> ("assign");
 
     // ── 2. Create WebView — all relay options must be registered ──────────────
     // Resource provider is wired here; assets are served from BinaryData (Stage 3).
@@ -41,7 +40,6 @@ BarkingHillLFOSyncAudioProcessorEditor::BarkingHillLFOSyncAudioProcessorEditor (
             .withOptionsFrom (*syncRelay)
             .withOptionsFrom (*retriggerRelay)
             .withOptionsFrom (*ccNumberRelay)
-            .withOptionsFrom (*assignRelay)
     );
 
     // ── 3. Create Attachments ─────────────────────────────────────────────────
@@ -84,11 +82,6 @@ BarkingHillLFOSyncAudioProcessorEditor::BarkingHillLFOSyncAudioProcessorEditor (
         nullptr
     );
 
-    assignAttachment = std::make_unique<juce::WebToggleButtonParameterAttachment>(
-        *audioProcessor.parameters.getParameter ("assign"),
-        *assignRelay,
-        nullptr
-    );
 
     // ── 4. Add WebView to component hierarchy ─────────────────────────────────
     addAndMakeVisible (*webView);
@@ -102,7 +95,7 @@ BarkingHillLFOSyncAudioProcessorEditor::BarkingHillLFOSyncAudioProcessorEditor (
 BarkingHillLFOSyncAudioProcessorEditor::~BarkingHillLFOSyncAudioProcessorEditor()
 {
     // Destruction happens automatically in REVERSE declaration order:
-    //   Attachments first (assignAttachment -> ... -> rateAttachment)
+    //   Attachments first (ccNumberAttachment -> ... -> rateAttachment)
     //   then webView
     //   then Relays (assignRelay -> ... -> rateRelay)
     // Attachments are destroyed before webView — this is the required order.

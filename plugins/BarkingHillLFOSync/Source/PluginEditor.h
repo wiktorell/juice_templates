@@ -55,7 +55,6 @@ private:
     std::unique_ptr<juce::WebToggleButtonRelay>  syncRelay;
     std::unique_ptr<juce::WebToggleButtonRelay>  retriggerRelay;
     std::unique_ptr<juce::WebSliderRelay>        ccNumberRelay;   // Integer-stepped slider
-    std::unique_ptr<juce::WebToggleButtonRelay>  assignRelay;
 
     // 2. WEBVIEW SECOND — constructed after all relays are registered
     std::unique_ptr<juce::WebBrowserComponent>   webView;
@@ -69,7 +68,6 @@ private:
     std::unique_ptr<juce::WebToggleButtonParameterAttachment>  syncAttachment;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment>  retriggerAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment>        ccNumberAttachment;
-    std::unique_ptr<juce::WebToggleButtonParameterAttachment>  assignAttachment;
 
     //==========================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BarkingHillLFOSyncAudioProcessorEditor)

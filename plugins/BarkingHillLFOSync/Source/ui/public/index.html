@@ -382,82 +382,6 @@
       margin-top: 15px;
     }
 
-    /* ─── Assign button ──────────────────────── */
-    .assign-group {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      flex-shrink: 0;
-      margin-top: 22px;
-    }
-
-    .assign-btn {
-      width: 80px;
-      height: 36px;
-      background: #0e0700;
-      border: 2px solid #d4a574;
-      border-radius: 3px;
-      color: #d4a574;
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.35em;
-      text-transform: uppercase;
-      cursor: pointer;
-      position: relative;
-      box-shadow:
-        inset 0 2px 8px rgba(0,0,0,0.8),
-        0 2px 6px rgba(0,0,0,0.7);
-      transition:
-        box-shadow 0.15s ease,
-        background 0.15s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .assign-btn:hover {
-      background: #1a0e04;
-      box-shadow:
-        inset 0 2px 8px rgba(0,0,0,0.8),
-        0 2px 6px rgba(0,0,0,0.7),
-        0 0 6px rgba(212,165,116,0.25);
-    }
-
-    .assign-btn:active {
-      background: #0a0500;
-    }
-
-    .assign-btn.armed {
-      animation: pulseBrassGlow 0.8s ease-in-out infinite alternate;
-    }
-
-    @keyframes pulseBrassGlow {
-      from {
-        box-shadow:
-          inset 0 2px 8px rgba(0,0,0,0.8),
-          0 2px 6px rgba(0,0,0,0.7);
-      }
-      to {
-        box-shadow:
-          inset 0 2px 8px rgba(0,0,0,0.8),
-          0 2px 6px rgba(0,0,0,0.7),
-          0 0 12px #d4a574,
-          0 0 24px rgba(212,165,116,0.4),
-          0 0 40px rgba(212,165,116,0.15);
-      }
-    }
-
-    .assign-label {
-      font-size: 9px;
-      font-weight: 500;
-      letter-spacing: 0.3em;
-      text-transform: uppercase;
-      color: #a07848;
-      text-align: center;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.9);
-    }
 
     /* ══════════════════════════════════════════
        BRAND NAME — v7
@@ -551,11 +475,6 @@
         <div class="knob-value" id="valCC">CC 1</div>
       </div>
 
-      <!-- Assign button -->
-      <div class="assign-group">
-        <button class="assign-btn" id="assignBtn">ASSIGN</button>
-        <div class="assign-label" id="assignLabel">DISARMED</div>
-      </div>
 
     </div><!-- /.controls-row -->
 
@@ -612,7 +531,6 @@
       sync:           false,
       retrigger:      false,
       cc_number:      1,
-      assign:         false,
       playhead:       0,
       subdivisionIdx: 5,
     };
@@ -680,9 +598,6 @@
       setIndicatorAngle(document.getElementById('indCC'), normToAngle(ccToNorm(display.cc_number)));
       document.getElementById('valCC').textContent = 'CC ' + display.cc_number;
 
-      // Assign
-      document.getElementById('assignBtn').classList.toggle('armed', display.assign);
-      document.getElementById('assignLabel').textContent = display.assign ? 'ARMED' : 'DISARMED';
     }
 
     // ════════════════════════════════════════════
@@ -736,11 +651,6 @@
           display.cc_number = normToCC(normalizedValue);
           setIndicatorAngle(document.getElementById('indCC'), normToAngle(ccToNorm(display.cc_number)));
           document.getElementById('valCC').textContent = 'CC ' + display.cc_number;
-          break;
-        case 'assign':
-          display.assign = normalizedValue >= 0.5;
-          document.getElementById('assignBtn').classList.toggle('armed', display.assign);
-          document.getElementById('assignLabel').textContent = display.assign ? 'ARMED' : 'DISARMED';
           break;
       }
     };
@@ -815,15 +725,6 @@
       });
     }
 
-    // --- Assign (toggle) ---
-    const assignState = getToggleState('assign');
-    if (assignState) {
-      assignState.valueChangedEvent.addListener(() => {
-        display.assign = assignState.getValue();
-        document.getElementById('assignBtn').classList.toggle('armed', display.assign);
-        document.getElementById('assignLabel').textContent = display.assign ? 'ARMED' : 'DISARMED';
-      });
-    }
 
     // ════════════════════════════════════════════
     // Knob drag — relative delta pattern (JUCE 8 critical pattern #16)
@@ -937,17 +838,6 @@
       sendParameterChange('retrigger', n);
     });
 
-    // ════════════════════════════════════════════
-    // Assign button
-    // ════════════════════════════════════════════
-    document.getElementById('assignBtn').addEventListener('click', () => {
-      display.assign = !display.assign;
-      document.getElementById('assignBtn').classList.toggle('armed', display.assign);
-      document.getElementById('assignLabel').textContent = display.assign ? 'ARMED' : 'DISARMED';
-      const n = display.assign ? 1.0 : 0.0;
-      if (assignState) assignState.setValue(display.assign);
-      sendParameterChange('assign', n);
-    });
 
     // ════════════════════════════════════════════
     // Canvas waveform display (60fps requestAnimationFrame loop)

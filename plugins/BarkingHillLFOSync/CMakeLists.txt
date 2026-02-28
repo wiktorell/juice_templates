@@ -15,6 +15,7 @@ juce_add_plugin(BarkingHillLFOSync
     FORMATS                  VST3 AU Standalone
     PRODUCT_NAME             "LFO Sync"
     IS_SYNTH                 FALSE
+    IS_MIDI_EFFECT           TRUE
     NEEDS_MIDI_INPUT         TRUE
     NEEDS_MIDI_OUTPUT        TRUE
     NEEDS_WEB_BROWSER        TRUE   # Required for VST3 WebView support (pattern #9)

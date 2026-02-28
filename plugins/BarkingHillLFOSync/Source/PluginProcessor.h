@@ -8,9 +8,9 @@
  *
  * LFO Sync — tempo-syncable LFO modulation utility.
  *
- * Plugin type:    Effect (IS_SYNTH FALSE), stereo audio passthrough
- * MIDI:           NEEDS_MIDI_INPUT TRUE, NEEDS_MIDI_OUTPUT TRUE
- * Parameters:     7 (rate, depth, waveform, sync, retrigger, cc_number, assign)
+ * Plugin type:    MIDI FX (IS_MIDI_EFFECT TRUE) — Logic MIDI FX slot
+ * MIDI:           NEEDS_MIDI_INPUT TRUE, NEEDS_MIDI_OUTPUT TRUE, no audio buses
+ * Parameters:     6 (rate, depth, waveform, sync, retrigger, cc_number)
  *                 + 1 system parameter (mod_output, runtime-only)
  *
  * Stage 2: DSP Complete (all phases)
@@ -43,7 +43,7 @@ public:
     // MIDI I/O enabled (retrigger input + CC output)
     bool acceptsMidi() const override  { return true; }
     bool producesMidi() const override { return true; }
-    bool isMidiEffect() const override { return false; }
+    bool isMidiEffect() const override { return true; }
     double getTailLengthSeconds() const override { return 0.0; }
 
     //==========================================================================
