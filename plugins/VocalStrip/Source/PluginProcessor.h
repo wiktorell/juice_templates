@@ -76,5 +76,19 @@ private:
     // Reverb send buffer: mono, sized to max block in prepareToPlay
     juce::AudioBuffer<float> reverbSendBuffer;
 
+    // =========================================================================
+    // DSP Components — Phase DSP-3: Reverb + Full Chain Integration
+    // =========================================================================
+
+    // Pre-delay: two DelayLine instances (stereo L + R), max 100ms at 192kHz
+    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> preDelayL { 20000 };
+    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> preDelayR { 20000 };
+
+    // Reverb engine (stereo, juce::dsp::Reverb — NOT juce::Reverb)
+    juce::dsp::Reverb reverb;
+
+    // Reverb dry/wet mixer (stereo, 2 channels)
+    juce::dsp::DryWetMixer<float> reverbDryWet;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(VocalStripAudioProcessor)
 };

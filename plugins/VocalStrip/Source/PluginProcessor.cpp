@@ -374,6 +374,31 @@ void VocalStripAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBl
     // Preallocate reverb send buffer (mono, max block size)
     reverbSendBuffer.setSize(1, samplesPerBlock);
     reverbSendBuffer.clear();
+
+    // =========================================================================
+    // Phase DSP-3: Reverb + Full Chain Integration
+    // =========================================================================
+
+    // Stereo spec for reverb (2 channels)
+    juce::dsp::ProcessSpec stereoSpec;
+    stereoSpec.sampleRate = sampleRate;
+    stereoSpec.maximumBlockSize = static_cast<juce::uint32>(samplesPerBlock);
+    stereoSpec.numChannels = 2;
+
+    // Pre-delay: stereo (L+R identical delay instances, mono)
+    preDelayL.prepare(monoSpec);
+    preDelayL.reset();
+    preDelayR.prepare(monoSpec);
+    preDelayR.reset();
+
+    // Reverb: stereo (CRITICAL: use prepare(spec) — pattern #17)
+    reverb.prepare(stereoSpec);
+    reverb.reset();
+
+    // Reverb dry/wet mixer: stereo, linear mixing
+    reverbDryWet.prepare(stereoSpec);
+    reverbDryWet.setMixingRule(juce::dsp::DryWetMixingRule::linear);
+    reverbDryWet.reset();
 }
 
 void VocalStripAudioProcessor::releaseResources()
@@ -618,10 +643,81 @@ void VocalStripAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     }
 
     // =========================================================================
-    // Reverb section — pass-through (implemented in Phase DSP-3)
-    // reverbSendBuffer is populated but not yet connected to reverb.
-    // Stereo signal passes through unchanged after delay processing.
+    // Phase DSP-3: Reverb Section + Full Chain Integration
     // =========================================================================
+
+    // Read reverb parameters (atomic, real-time safe)
+    const int  reverbType     = static_cast<int>(parameters.getRawParameterValue("reverb_type")->load());
+    const auto reverbPredelay = parameters.getRawParameterValue("reverb_predelay")->load();
+    const auto reverbDecay    = parameters.getRawParameterValue("reverb_decay")->load();
+    const auto reverbDamping  = parameters.getRawParameterValue("reverb_damping")->load();
+    const auto reverbMix      = parameters.getRawParameterValue("reverb_mix")->load();
+    const bool reverbBypass   = parameters.getRawParameterValue("reverb_bypass")->load() > 0.5f;
+
+    if (!reverbBypass)
+    {
+        // Step 1: Capture dry stereo signal BEFORE reverb processing for DryWetMixer
+        auto stereoBlock = juce::dsp::AudioBlock<float>(buffer);
+        reverbDryWet.setWetMixProportion(reverbMix / 100.0f);
+        reverbDryWet.pushDrySamples(stereoBlock);
+
+        // Step 2: Add delay-to-reverb send signal into both L+R channels
+        // reverbSendBuffer is mono (1 channel), add to both stereo channels
+        const float* sendData = reverbSendBuffer.getReadPointer(0);
+        float* ch0 = buffer.getWritePointer(0);
+        float* ch1 = buffer.getWritePointer(1);
+        for (int n = 0; n < numSamples; ++n)
+        {
+            ch0[n] += sendData[n];
+            ch1[n] += sendData[n];
+        }
+
+        // Step 3: Pre-delay (stereo, independent L+R delay lines, same input)
+        const float preDelaySamples = reverbPredelay * static_cast<float>(currentSampleRate) / 1000.0f;
+        const float clampedPreDelay = juce::jlimit(0.0f, 19999.0f, preDelaySamples);
+
+        preDelayL.setDelay(clampedPreDelay);
+        preDelayR.setDelay(clampedPreDelay);
+
+        for (int n = 0; n < numSamples; ++n)
+        {
+            preDelayL.pushSample(0, ch0[n]);
+            ch0[n] = preDelayL.popSample(0, clampedPreDelay);
+
+            preDelayR.pushSample(0, ch1[n]);
+            ch1[n] = preDelayR.popSample(0, clampedPreDelay);
+        }
+
+        // Step 4: Set reverb parameters based on type (Plate or Room)
+        juce::dsp::Reverb::Parameters reverbParams;
+        const float decayNorm = (reverbDecay - 0.3f) / (8.0f - 0.3f);  // 0.0 - 1.0
+
+        if (reverbType == 0)  // Plate
+        {
+            reverbParams.roomSize = 0.4f + decayNorm * 0.55f;   // 0.40 - 0.95
+            reverbParams.width    = 1.0f;                         // Full stereo spread
+        }
+        else  // Room
+        {
+            reverbParams.roomSize = 0.1f + decayNorm * 0.50f;   // 0.10 - 0.60
+            reverbParams.width    = 0.7f;                         // Slightly narrower
+        }
+        reverbParams.damping    = reverbDamping / 100.0f;
+        reverbParams.wetLevel   = 1.0f;   // Wet/dry handled by DryWetMixer
+        reverbParams.dryLevel   = 0.0f;
+        reverbParams.freezeMode = false;
+        reverb.setParameters(reverbParams);
+
+        // Step 5: Process reverb (CRITICAL pattern #17: process(context) NOT processMono/processStereo)
+        juce::dsp::AudioBlock<float> reverbBlock(buffer);
+        juce::dsp::ProcessContextReplacing<float> reverbContext(reverbBlock);
+        reverb.process(reverbContext);
+
+        // Step 6: Apply reverb dry/wet mix
+        auto stereoOutBlock = juce::dsp::AudioBlock<float>(buffer);
+        reverbDryWet.mixWetSamples(stereoOutBlock);
+    }
+    // If reverbBypass: stereo signal from delay section passes through unchanged
 }
 
 //==============================================================================
