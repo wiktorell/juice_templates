@@ -5,7 +5,8 @@
 
 class VocalStripAudioProcessor;
 
-class VocalStripAudioProcessorEditor : public juce::AudioProcessorEditor
+class VocalStripAudioProcessorEditor : public juce::AudioProcessorEditor,
+                                        public juce::Timer
 {
 public:
     explicit VocalStripAudioProcessorEditor (VocalStripAudioProcessor& p);
@@ -108,6 +109,11 @@ private:
     std::unique_ptr<juce::WebSliderParameterAttachment>       reverbDampingAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment>       reverbMixAttachment;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> reverbBypassAttachment;
+
+    // ========================================================================
+    // GR Meter — 30 Hz timer reads grMeterValue from processor, sends to JS
+    // ========================================================================
+    void timerCallback() override;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (VocalStripAudioProcessorEditor)
 };

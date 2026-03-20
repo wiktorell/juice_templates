@@ -1248,12 +1248,11 @@
 
       animateNeedle();
 
-      function idleDrift() {
-        var drift = (Math.random() - 0.5) * 4;
-        targetAngle = Math.max(-52, Math.min(-44, -48 + drift));
-      }
-
-      setInterval(idleDrift, 120);
+      // Global function called by C++ timerCallback() at 30 Hz
+      // Receives needle angle: -50 (rest/no GR) to +50 (heavy GR)
+      window.updateGRMeter = function(angle) {
+        targetAngle = angle;
+      };
     })();
 
     /* ============================================================

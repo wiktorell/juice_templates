@@ -200,6 +200,8 @@ VocalStripAudioProcessorEditor::VocalStripAudioProcessorEditor (VocalStripAudioP
 
     // Fixed canvas size matching v6-ui dimensions: 1120 x 520
     setSize (1120, 520);
+
+    startTimerHz (30);  // 30 Hz GR meter refresh
 }
 
 VocalStripAudioProcessorEditor::~VocalStripAudioProcessorEditor()
@@ -222,6 +224,32 @@ void VocalStripAudioProcessorEditor::resized()
     // WebView fills the entire editor bounds.
     if (webView != nullptr)
         webView->setBounds (getLocalBounds());
+}
+
+//==============================================================================
+// GR Meter — 30 Hz timer reads gain reduction from processor, drives JS needle
+//==============================================================================
+void VocalStripAudioProcessorEditor::timerCallback()
+{
+    if (webView == nullptr)
+        return;
+
+    // Read GR value from audio thread atomic (lock-free)
+    // Range: 0.0 (no reduction) to -30.0 dB (max reduction)
+    const float grDB = audioProcessor.grMeterValue.load();
+
+    // Map dB to needle angle:
+    //   0 dB  (no GR)    -> -50 deg (rest position, left)
+    //  -20 dB (heavy GR) -> +50 deg (full deflection, right)
+    // Linear mapping: angle = -50 + (|grDB| / 20.0f) * 100.0f
+    const float absGR = juce::jlimit (0.0f, 20.0f, -grDB);   // 0 to 20
+    const float needleAngle = -50.0f + (absGR / 20.0f) * 100.0f;  // -50 to +50
+
+    // Send to JavaScript via evaluateJavascript (message thread safe)
+    // JavaScript exposes a global function: updateGRMeter(angle)
+    const juce::String js = "if(typeof updateGRMeter==='function')updateGRMeter("
+                            + juce::String (needleAngle, 1) + ");";
+    webView->evaluateJavascript (js, [] (juce::WebBrowserComponent::EvaluationResult) {});
 }
 
 //==============================================================================
