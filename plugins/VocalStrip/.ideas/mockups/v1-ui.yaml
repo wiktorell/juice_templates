@@ -1,0 +1,415 @@
+version: 1
+plugin: VocalStrip
+aesthetic: vintage-hardware-001
+
+dimensions:
+  width: 1120
+  height: 420
+
+top_bar:
+  height: 50
+  title: VOCALSTRIP
+  title_font_size: 22
+  title_font_weight: 300
+  title_letter_spacing: "0.4em"
+  preset_selector: true
+  presets:
+    - Pop Vocal
+    - Rock Vocal
+    - Intimate
+
+sections:
+  - id: eq
+    label: EQ
+    x: 0
+    width: 280
+    controls:
+      # Row 1 — high-pass + low shelf
+      - id: eq_hp_freq
+        type: slider
+        label: HP
+        position: { x: 20, y: 80 }
+        size: { width: 62, height: 62 }
+        range: [20.0, 500.0]
+        default: 80.0
+        unit: Hz
+        display_as: knob
+
+      - id: eq_low_shelf_gain
+        type: slider
+        label: LOW GAIN
+        position: { x: 109, y: 80 }
+        size: { width: 62, height: 62 }
+        range: [-12.0, 12.0]
+        default: 0.0
+        unit: dB
+        display_as: knob
+
+      - id: eq_low_shelf_freq
+        type: slider
+        label: LOW FREQ
+        position: { x: 198, y: 80 }
+        size: { width: 62, height: 62 }
+        range: [60.0, 400.0]
+        default: 200.0
+        unit: Hz
+        display_as: knob
+
+      # Row 2 — mid band
+      - id: eq_mid_gain
+        type: slider
+        label: MID GAIN
+        position: { x: 20, y: 185 }
+        size: { width: 62, height: 62 }
+        range: [-12.0, 12.0]
+        default: 0.0
+        unit: dB
+        display_as: knob
+
+      - id: eq_mid_freq
+        type: slider
+        label: MID FREQ
+        position: { x: 109, y: 185 }
+        size: { width: 62, height: 62 }
+        range: [200.0, 8000.0]
+        default: 1000.0
+        unit: Hz
+        display_as: knob
+
+      - id: eq_mid_q
+        type: slider
+        label: MID Q
+        position: { x: 198, y: 185 }
+        size: { width: 62, height: 62 }
+        range: [0.3, 5.0]
+        default: 1.0
+        unit: ""
+        display_as: knob
+
+      # Row 3 — high shelf
+      - id: eq_high_shelf_gain
+        type: slider
+        label: HI GAIN
+        position: { x: 54, y: 290 }
+        size: { width: 62, height: 62 }
+        range: [-12.0, 12.0]
+        default: 0.0
+        unit: dB
+        display_as: knob
+
+      - id: eq_high_shelf_freq
+        type: slider
+        label: HI FREQ
+        position: { x: 164, y: 290 }
+        size: { width: 62, height: 62 }
+        range: [2000.0, 16000.0]
+        default: 8000.0
+        unit: Hz
+        display_as: knob
+
+      # Bypass
+      - id: eq_bypass
+        type: toggle
+        label: BYPASS
+        position: { x: 120, y: 375 }
+        size: { width: 40, height: 20 }
+        default: false
+
+  - id: comp
+    label: COMP
+    x: 280
+    width: 280
+    controls:
+      # Mode switch at top
+      - id: comp_mode
+        type: combo
+        label: MODE
+        position: { x: 295, y: 65 }
+        size: { width: 120, height: 24 }
+        options:
+          - id: 0
+            label: SIMPLE
+          - id: 1
+            label: MANUAL
+        default: 1
+
+      # Simple mode — Amount (large, shown when mode=SIMPLE)
+      - id: comp_amount
+        type: slider
+        label: AMOUNT
+        position: { x: 340, y: 110 }
+        size: { width: 80, height: 80 }
+        range: [0.0, 100.0]
+        default: 50.0
+        unit: "%"
+        display_as: knob
+        visible_when: "comp_mode=0"
+
+      # Manual mode knobs (shown when mode=MANUAL)
+      - id: comp_threshold
+        type: slider
+        label: THRESHOLD
+        position: { x: 295, y: 110 }
+        size: { width: 62, height: 62 }
+        range: [-60.0, 0.0]
+        default: -18.0
+        unit: dB
+        display_as: knob
+        visible_when: "comp_mode=1"
+
+      - id: comp_ratio
+        type: slider
+        label: RATIO
+        position: { x: 384, y: 110 }
+        size: { width: 62, height: 62 }
+        range: [1.0, 20.0]
+        default: 4.0
+        unit: ":1"
+        display_as: knob
+        visible_when: "comp_mode=1"
+
+      - id: comp_attack
+        type: slider
+        label: ATTACK
+        position: { x: 295, y: 205 }
+        size: { width: 62, height: 62 }
+        range: [0.1, 100.0]
+        default: 10.0
+        unit: ms
+        display_as: knob
+        visible_when: "comp_mode=1"
+
+      - id: comp_release
+        type: slider
+        label: RELEASE
+        position: { x: 384, y: 205 }
+        size: { width: 62, height: 62 }
+        range: [10.0, 1000.0]
+        default: 200.0
+        unit: ms
+        display_as: knob
+        visible_when: "comp_mode=1"
+
+      - id: comp_makeup
+        type: slider
+        label: MAKEUP
+        position: { x: 473, y: 157 }
+        size: { width: 62, height: 62 }
+        range: [0.0, 24.0]
+        default: 0.0
+        unit: dB
+        display_as: knob
+
+      # GR Meter (decorative in YAML, animated in HTML)
+      - id: comp_gr_meter
+        type: display
+        label: GR
+        position: { x: 295, y: 290 }
+        size: { width: 240, height: 60 }
+
+      # Bypass
+      - id: comp_bypass
+        type: toggle
+        label: BYPASS
+        position: { x: 400, y: 375 }
+        size: { width: 40, height: 20 }
+        default: false
+
+  - id: delay
+    label: DELAY
+    x: 560
+    width: 280
+    controls:
+      # Mode switch
+      - id: delay_mode
+        type: combo
+        label: MODE
+        position: { x: 575, y: 65 }
+        size: { width: 120, height: 24 }
+        options:
+          - id: 0
+            label: SLAPBACK
+          - id: 1
+            label: SYNC
+        default: 0
+
+      # Slapback time knob (visible when mode=SLAPBACK)
+      - id: delay_time
+        type: slider
+        label: TIME
+        position: { x: 575, y: 110 }
+        size: { width: 62, height: 62 }
+        range: [20.0, 200.0]
+        default: 100.0
+        unit: ms
+        display_as: knob
+        visible_when: "delay_mode=0"
+
+      # Sync division buttons (visible when mode=SYNC)
+      - id: delay_division
+        type: combo
+        label: DIVISION
+        position: { x: 575, y: 110 }
+        size: { width: 240, height: 40 }
+        options:
+          - id: 0
+            label: "1/16"
+          - id: 1
+            label: "1/8"
+          - id: 2
+            label: "1/4"
+          - id: 3
+            label: "1/2"
+        default: 1
+        visible_when: "delay_mode=1"
+
+      - id: delay_feedback
+        type: slider
+        label: FEEDBACK
+        position: { x: 664, y: 110 }
+        size: { width: 62, height: 62 }
+        range: [0.0, 90.0]
+        default: 20.0
+        unit: "%"
+        display_as: knob
+
+      - id: delay_mix
+        type: slider
+        label: MIX
+        position: { x: 753, y: 110 }
+        size: { width: 62, height: 62 }
+        range: [0.0, 100.0]
+        default: 30.0
+        unit: "%"
+        display_as: knob
+
+      # Reverb Send slider
+      - id: delay_reverb_send
+        type: slider
+        label: "REVERB SEND"
+        position: { x: 575, y: 290 }
+        size: { width: 240, height: 20 }
+        range: [0.0, 100.0]
+        default: 20.0
+        unit: "%"
+        display_as: horizontal_slider
+
+      # Bypass
+      - id: delay_bypass
+        type: toggle
+        label: BYPASS
+        position: { x: 680, y: 375 }
+        size: { width: 40, height: 20 }
+        default: false
+
+  - id: reverb
+    label: REVERB
+    x: 840
+    width: 280
+    controls:
+      # Type toggle
+      - id: reverb_type
+        type: combo
+        label: TYPE
+        position: { x: 855, y: 65 }
+        size: { width: 120, height: 24 }
+        options:
+          - id: 0
+            label: PLATE
+          - id: 1
+            label: ROOM
+        default: 0
+
+      - id: reverb_predelay
+        type: slider
+        label: PRE-DLY
+        position: { x: 855, y: 110 }
+        size: { width: 62, height: 62 }
+        range: [0.0, 100.0]
+        default: 20.0
+        unit: ms
+        display_as: knob
+
+      - id: reverb_decay
+        type: slider
+        label: DECAY
+        position: { x: 944, y: 110 }
+        size: { width: 62, height: 62 }
+        range: [0.3, 8.0]
+        default: 1.5
+        unit: s
+        display_as: knob
+
+      - id: reverb_damping
+        type: slider
+        label: DAMPING
+        position: { x: 855, y: 205 }
+        size: { width: 62, height: 62 }
+        range: [0.0, 100.0]
+        default: 50.0
+        unit: "%"
+        display_as: knob
+
+      - id: reverb_mix
+        type: slider
+        label: MIX
+        position: { x: 944, y: 205 }
+        size: { width: 62, height: 62 }
+        range: [0.0, 100.0]
+        default: 25.0
+        unit: "%"
+        display_as: knob
+
+      # Bypass
+      - id: reverb_bypass
+        type: toggle
+        label: BYPASS
+        position: { x: 960, y: 375 }
+        size: { width: 40, height: 20 }
+        default: false
+
+styling:
+  colors:
+    bg_dark: "#2a1a0a"
+    bg_mid: "#4a3a2a"
+    bg_very_dark: "#1a0a00"
+    bg_surface: "#3a2a1a"
+    accent_brass_light: "#d4a574"
+    accent_brass: "#c49564"
+    accent_brass_dark: "#a08050"
+    accent_red: "#b8453d"
+    text_primary: "#c49564"
+    scan_line: "rgba(0,0,0,0.03)"
+    brass_glow: "rgba(212,165,116,0.4)"
+    shadow_heavy: "rgba(0,0,0,0.8)"
+  fonts:
+    primary: "Helvetica Neue, Helvetica, Arial, sans-serif"
+  knob:
+    diameter: 62
+    indicator_color: "#d4a574"
+    indicator_width: 4
+    indicator_length: 28
+    rotation_range_deg: 270
+  bypass_led:
+    off_color: "#1a0a00"
+    on_color: "#b8453d"
+    on_glow: "rgba(184,69,61,0.6)"
+  section_divider:
+    width: 1
+    color: "rgba(196,149,100,0.25)"
+  typography:
+    plugin_title:
+      size: 22
+      weight: 300
+      letter_spacing: "0.4em"
+      transform: uppercase
+    section_label:
+      size: 10
+      weight: 500
+      letter_spacing: "0.3em"
+      transform: uppercase
+    param_label:
+      size: 9
+      weight: 400
+      letter_spacing: "0.3em"
+      transform: uppercase
