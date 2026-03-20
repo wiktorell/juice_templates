@@ -1,5 +1,7 @@
 version: 6
 plugin: VocalStrip
+finalized: true
+finalized_at: 2026-03-20
 aesthetic: vintage-hardware-001
 change_from_v5: "Top bar title update only. VOCALSTRIP now displays with a 'by Barking Hill' subtitle on a second line. Top bar height increased from 50px to 58px to accommodate two-line title; sections-strip top offset adjusted from 50px to 58px accordingly. Everything else — colors, layout, dimensions, controls, JS logic — is identical to v5."
 

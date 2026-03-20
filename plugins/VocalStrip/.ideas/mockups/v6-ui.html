@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>VocalStrip</title>
+  <script type="module" src="./js/juce/index.js"></script>
+  <style>
+    /* ============================================================
+       WEBVIEW REQUIRED — no viewport units (100vh / 100vw)
+    ============================================================ */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: default;
+      overflow: hidden;
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      background: #2a1a08;
+    }
+
+    /* ============================================================
+       CSS CUSTOM PROPERTIES
+    ============================================================ */
+    :root {
+      --bg-dark: #3d2a14;
+      --bg-mid: #5e4a30;
+      --bg-very-dark: #2a1a08;
+      --bg-surface: #4d3a22;
+      --accent-brass-light: #e8be8a;
+      --accent-brass: #d4a066;
+      --accent-brass-dark: #b88848;
+      --accent-red: #b8453d;
+      --text-primary: #d4a066;
+      --shadow-heavy: rgba(0,0,0,0.65);
+      --shadow-medium: rgba(0,0,0,0.45);
+      --brass-glow: rgba(232,190,138,0.5);
+      --scan-line: rgba(0,0,0,0.02);
+    }
+
+    /* ============================================================
+       MAIN CONTAINER — 1120 x 520 fixed canvas
+    ============================================================ */
+    .plugin-shell {
+      width: 1120px;
+      height: 520px;
+      position: relative;
+      background:
+        radial-gradient(ellipse at 50% 40%, #5e4a30 0%, #3d2a14 70%, #2a1a08 100%);
+      overflow: hidden;
+    }
+
+    /* Scan lines */
+    .plugin-shell::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 3px,
+        var(--scan-line) 3px,
+        var(--scan-line) 4px
+      );
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    /* Vignette */
+    .plugin-shell::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(
+        ellipse at 50% 50%,
+        rgba(0,0,0,0) 50%,
+        rgba(0,0,0,0.2) 100%
+      );
+      pointer-events: none;
+      z-index: 101;
+    }
+
+    /* ============================================================
+       TOP BAR — 58px to accommodate two-line title
+    ============================================================ */
+    .top-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 22px;
+      background: linear-gradient(
+        to bottom,
+        rgba(42,26,8,0.95) 0%,
+        rgba(61,42,20,0.85) 100%
+      );
+      border-bottom: 1px solid rgba(232,190,138,0.30);
+      z-index: 10;
+    }
+
+    .plugin-title-block {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .plugin-title {
+      font-size: 22px;
+      font-weight: 300;
+      letter-spacing: 0.4em;
+      color: var(--accent-brass-light);
+      text-transform: uppercase;
+      text-shadow: 0 0 18px rgba(232,190,138,0.5), 0 1px 3px rgba(0,0,0,0.8);
+      line-height: 1;
+    }
+
+    .plugin-subtitle {
+      font-size: 10px;
+      font-weight: 400;
+      letter-spacing: 0.2em;
+      color: var(--accent-brass-light);
+      opacity: 0.7;
+      line-height: 1;
+      text-shadow: 0 0 10px rgba(232,190,138,0.3);
+    }
+
+    .preset-wrapper {
+      position: relative;
+    }
+
+    .preset-btn {
+      background: var(--bg-very-dark);
+      border: 1px solid rgba(232,190,138,0.35);
+      color: var(--accent-brass);
+      font-family: inherit;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: border-color 0.15s, background 0.15s;
+      min-width: 160px;
+      justify-content: space-between;
+    }
+
+    .preset-btn:hover {
+      border-color: rgba(232,190,138,0.6);
+      background: var(--bg-surface);
+    }
+
+    .preset-btn .arrow {
+      font-size: 8px;
+      opacity: 0.7;
+    }
+
+    .preset-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      min-width: 160px;
+      background: var(--bg-very-dark);
+      border: 1px solid rgba(232,190,138,0.35);
+      border-top: none;
+      z-index: 200;
+    }
+
+    .preset-dropdown.open {
+      display: block;
+    }
+
+    .preset-option {
+      display: block;
+      padding: 7px 14px;
+      font-size: 10px;
+      font-weight: 400;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--accent-brass-dark);
+      cursor: pointer;
+      transition: background 0.1s, color 0.1s;
+      border-bottom: 1px solid rgba(232,190,138,0.10);
+    }
+
+    .preset-option:last-child {
+      border-bottom: none;
+    }
+
+    .preset-option:hover {
+      background: var(--bg-surface);
+      color: var(--accent-brass-light);
+    }
+
+    /* ============================================================
+       SECTIONS STRIP — top offset 58px to match top bar height
+    ============================================================ */
+    .sections-strip {
+      position: absolute;
+      top: 58px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+    }
+
+    .section {
+      flex: 0 0 280px;
+      position: relative;
+      padding: 14px 18px 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(94,74,48,0.18) 0%, transparent 70%);
+    }
+
+    /* Section dividers */
+    .section + .section::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 10px;
+      bottom: 10px;
+      width: 1px;
+      background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        rgba(232,190,138,0.22) 20%,
+        rgba(232,190,138,0.35) 50%,
+        rgba(232,190,138,0.22) 80%,
+        transparent 100%
+      );
+    }
+
+    .section-label {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--accent-brass);
+      text-align: center;
+      margin-bottom: 10px;
+      text-shadow: 0 0 10px rgba(212,160,102,0.35);
+      width: 100%;
+    }
+
+    /* ============================================================
+       CONTROLS GRID — relative positioning within each section
+    ============================================================ */
+    .controls-area {
+      position: relative;
+      width: 244px;
+      flex: 1;
+    }
+
+    /* ============================================================
+       MODE PILL SWITCH
+    ============================================================ */
+    .pill-switch {
+      display: flex;
+      border: 1px solid rgba(232,190,138,0.30);
+      border-radius: 2px;
+      overflow: hidden;
+      width: 180px;
+      height: 26px;
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      cursor: pointer;
+    }
+
+    .pill-option {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      font-weight: 500;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--accent-brass-dark);
+      background: var(--bg-very-dark);
+      transition: background 0.15s, color 0.15s;
+      border-right: 1px solid rgba(232,190,138,0.20);
+    }
+
+    .pill-option:last-child {
+      border-right: none;
+    }
+
+    .pill-option.active {
+      background: var(--bg-surface);
+      color: var(--accent-brass-light);
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.4);
+    }
+
+    /* 4-button division group */
+    .division-group {
+      display: flex;
+      gap: 6px;
+      position: absolute;
+      top: 36px;
+      left: 0;
+    }
+
+    .division-btn {
+      width: 52px;
+      height: 36px;
+      background: var(--bg-very-dark);
+      border: 1px solid rgba(232,190,138,0.25);
+      color: var(--accent-brass-dark);
+      font-family: inherit;
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .division-btn.active {
+      background: var(--bg-surface);
+      color: var(--accent-brass-light);
+      border-color: rgba(232,190,138,0.55);
+    }
+
+    .division-btn:hover {
+      border-color: rgba(232,190,138,0.5);
+      color: var(--accent-brass);
+    }
+
+    /* ============================================================
+       KNOB
+       Indicator is a JS-created .knob-indicator child div only.
+       No CSS ::after pseudo-element — see v2 fix notes.
+    ============================================================ */
+    .knob-wrap {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .knob {
+      width: 62px;
+      height: 62px;
+      border-radius: 50%;
+      background: radial-gradient(
+        circle at 40% 35%,
+        #4d3a22 0%,
+        #3d2a14 30%,
+        #352010 60%,
+        #2a1a08 100%
+      );
+      box-shadow:
+        0 8px 16px rgba(0,0,0,0.65),
+        0 4px 8px rgba(0,0,0,0.45),
+        inset 0 1px 3px rgba(232,190,138,0.14),
+        inset 0 -1px 2px rgba(0,0,0,0.55);
+      position: relative;
+      cursor: ns-resize;
+      transition: transform 0.05s;
+      border: 1px solid rgba(232,190,138,0.16);
+    }
+
+    .knob:hover {
+      transform: scale(1.008);
+    }
+
+    .knob:active, .knob.dragging {
+      transform: scale(0.995);
+    }
+
+    .knob.large {
+      width: 80px;
+      height: 80px;
+    }
+
+    .knob-label {
+      margin-top: 7px;
+      font-size: 9px;
+      font-weight: 400;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--accent-brass-dark);
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .knob-value {
+      font-size: 8px;
+      letter-spacing: 0.1em;
+      color: rgba(212,160,102,0.6);
+      text-align: center;
+      margin-top: 2px;
+      min-height: 10px;
+    }
+
+    /* ============================================================
+       GR METER
+    ============================================================ */
+    .gr-meter {
+      position: absolute;
+      width: 210px;
+      height: 72px;
+      background: var(--bg-very-dark);
+      border: 1px solid rgba(232,190,138,0.22);
+      border-radius: 2px;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.6), 0 2px 6px rgba(0,0,0,0.4);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding-bottom: 8px;
+    }
+
+    .gr-meter-face {
+      position: relative;
+      width: 190px;
+      height: 56px;
+    }
+
+    .gr-meter-scale {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+    }
+
+    .gr-meter-label {
+      position: absolute;
+      top: 3px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 7px;
+      letter-spacing: 0.3em;
+      color: rgba(232,190,138,0.5);
+      text-transform: uppercase;
+    }
+
+    .meter-needle {
+      position: absolute;
+      bottom: 4px;
+      left: 50%;
+      width: 2px;
+      height: 44px;
+      background: linear-gradient(to top, #d4a066, #e8be8a);
+      transform-origin: 50% 100%;
+      transform: translateX(-50%) rotate(-50deg);
+      border-radius: 1px;
+      box-shadow: 0 0 4px rgba(232,190,138,0.55);
+      transition: transform 0.08s ease-out;
+    }
+
+    .meter-pivot {
+      position: absolute;
+      bottom: 1px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 8px;
+      height: 8px;
+      background: radial-gradient(circle, #e8be8a, #b88848);
+      border-radius: 50%;
+      box-shadow: 0 0 4px rgba(0,0,0,0.65);
+    }
+
+    .gr-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    /* ============================================================
+       REVERB SEND SLIDER
+    ============================================================ */
+    .send-slider-wrap {
+      position: absolute;
+      width: 218px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .send-slider-label {
+      font-size: 8px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--accent-brass-dark);
+    }
+
+    .send-slider-label .arrow-icon {
+      color: var(--accent-brass);
+      margin-right: 4px;
+    }
+
+    .send-slider-track {
+      width: 218px;
+      height: 12px;
+      background: var(--bg-very-dark);
+      border: 1px solid rgba(232,190,138,0.24);
+      border-radius: 1px;
+      position: relative;
+      cursor: ew-resize;
+    }
+
+    .send-slider-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      background: linear-gradient(to right, rgba(212,160,102,0.18), rgba(232,190,138,0.35));
+      pointer-events: none;
+    }
+
+    .send-slider-thumb {
+      position: absolute;
+      top: -3px;
+      width: 10px;
+      height: 18px;
+      background: linear-gradient(to bottom, #e8be8a, #b88848);
+      border-radius: 1px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.12);
+      transform: translateX(-50%);
+      cursor: ew-resize;
+    }
+
+    /* ============================================================
+       BYPASS LED BUTTON
+    ============================================================ */
+    .bypass-wrap {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+    }
+
+    .bypass-led {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #2a1a08;
+      border: 1px solid rgba(232,190,138,0.25);
+      transition: background 0.12s, box-shadow 0.12s;
+    }
+
+    .bypass-led.active {
+      background: #b8453d;
+      box-shadow: 0 0 6px rgba(184,69,61,0.8), 0 0 12px rgba(184,69,61,0.4);
+    }
+
+    .bypass-text {
+      font-size: 7px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: rgba(184,136,72,0.65);
+    }
+
+    /* ============================================================
+       UTILITY
+    ============================================================ */
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="plugin-shell" id="pluginShell">
+
+    <!-- TOP BAR -->
+    <div class="top-bar">
+      <div class="plugin-title-block">
+        <div class="plugin-title">VocalStrip</div>
+        <div class="plugin-subtitle">by Barking Hill</div>
+      </div>
+
+      <div class="preset-wrapper">
+        <button class="preset-btn" id="presetBtn">
+          <span id="presetLabel">Pop Vocal</span>
+          <span class="arrow">&#9660;</span>
+        </button>
+        <div class="preset-dropdown" id="presetDropdown">
+          <div class="preset-option" data-preset="Pop Vocal">Pop Vocal</div>
+          <div class="preset-option" data-preset="Rock Vocal">Rock Vocal</div>
+          <div class="preset-option" data-preset="Intimate">Intimate</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTIONS STRIP -->
+    <div class="sections-strip">
+
+      <!-- EQ SECTION -->
+      <div class="section" id="section-eq">
+        <div class="section-label">EQ</div>
+        <div class="controls-area">
+
+          <!-- Row 1: HP, Low Shelf Gain, Low Shelf Freq -->
+          <div class="knob-wrap" style="left:0px; top:0px;">
+            <div class="knob" data-param="eq_hp_freq" data-min="20" data-max="500" data-val="80" data-default="80"></div>
+            <div class="knob-label">HP</div>
+            <div class="knob-value" id="val-eq_hp_freq">80 Hz</div>
+          </div>
+          <div class="knob-wrap" style="left:91px; top:0px;">
+            <div class="knob" data-param="eq_low_shelf_gain" data-min="-12" data-max="12" data-val="0" data-default="0"></div>
+            <div class="knob-label">Low Gain</div>
+            <div class="knob-value" id="val-eq_low_shelf_gain">0.0 dB</div>
+          </div>
+          <div class="knob-wrap" style="left:182px; top:0px;">
+            <div class="knob" data-param="eq_low_shelf_freq" data-min="60" data-max="400" data-val="200" data-default="200"></div>
+            <div class="knob-label">Low Freq</div>
+            <div class="knob-value" id="val-eq_low_shelf_freq">200 Hz</div>
+          </div>
+
+          <!-- Row 2: Mid Gain, Mid Freq, Mid Q -->
+          <div class="knob-wrap" style="left:0px; top:105px;">
+            <div class="knob" data-param="eq_mid_gain" data-min="-12" data-max="12" data-val="0" data-default="0"></div>
+            <div class="knob-label">Mid Gain</div>
+            <div class="knob-value" id="val-eq_mid_gain">0.0 dB</div>
+          </div>
+          <div class="knob-wrap" style="left:91px; top:105px;">
+            <div class="knob" data-param="eq_mid_freq" data-min="200" data-max="8000" data-val="1000" data-default="1000"></div>
+            <div class="knob-label">Mid Freq</div>
+            <div class="knob-value" id="val-eq_mid_freq">1000 Hz</div>
+          </div>
+          <div class="knob-wrap" style="left:182px; top:105px;">
+            <div class="knob" data-param="eq_mid_q" data-min="0.3" data-max="5.0" data-val="1.0" data-default="1.0"></div>
+            <div class="knob-label">Mid Q</div>
+            <div class="knob-value" id="val-eq_mid_q">1.00</div>
+          </div>
+
+          <!-- Row 3: Hi Shelf Gain, Hi Shelf Freq (centered) -->
+          <div class="knob-wrap" style="left:36px; top:210px;">
+            <div class="knob" data-param="eq_high_shelf_gain" data-min="-12" data-max="12" data-val="0" data-default="0"></div>
+            <div class="knob-label">Hi Gain</div>
+            <div class="knob-value" id="val-eq_high_shelf_gain">0.0 dB</div>
+          </div>
+          <div class="knob-wrap" style="left:146px; top:210px;">
+            <div class="knob" data-param="eq_high_shelf_freq" data-min="2000" data-max="16000" data-val="8000" data-default="8000"></div>
+            <div class="knob-label">Hi Freq</div>
+            <div class="knob-value" id="val-eq_high_shelf_freq">8.0 kHz</div>
+          </div>
+
+        </div>
+
+        <div class="bypass-wrap" id="bypass-eq" data-section="eq" data-param="eq_bypass">
+          <div class="bypass-led" id="led-eq"></div>
+          <div class="bypass-text">Bypass</div>
+        </div>
+      </div>
+
+      <!-- COMP SECTION -->
+      <div class="section" id="section-comp">
+        <div class="section-label">Comp</div>
+        <div class="controls-area">
+
+          <div class="pill-switch" id="comp-mode-switch" style="top:0px;">
+            <div class="pill-option" data-mode="0" id="comp-simple">Simple</div>
+            <div class="pill-option active" data-mode="1" id="comp-manual">Manual</div>
+          </div>
+
+          <!-- Simple mode: single large Amount knob -->
+          <div class="knob-wrap hidden" id="comp-simple-controls" style="left:82px; top:36px;">
+            <div class="knob large" data-param="comp_amount" data-min="0" data-max="100" data-val="50" data-default="50"></div>
+            <div class="knob-label">Amount</div>
+            <div class="knob-value" id="val-comp_amount">50 %</div>
+          </div>
+
+          <!-- Manual mode: 5 knobs -->
+          <div id="comp-manual-controls">
+
+            <!-- Row 1: Threshold, Ratio, Makeup -->
+            <div class="knob-wrap" style="left:0px; top:36px;">
+              <div class="knob" data-param="comp_threshold" data-min="-60" data-max="0" data-val="-18" data-default="-18"></div>
+              <div class="knob-label">Threshold</div>
+              <div class="knob-value" id="val-comp_threshold">-18 dB</div>
+            </div>
+            <div class="knob-wrap" style="left:91px; top:36px;">
+              <div class="knob" data-param="comp_ratio" data-min="1" data-max="20" data-val="4" data-default="4"></div>
+              <div class="knob-label">Ratio</div>
+              <div class="knob-value" id="val-comp_ratio">4.0 :1</div>
+            </div>
+            <div class="knob-wrap" style="left:182px; top:36px;">
+              <div class="knob" data-param="comp_makeup" data-min="0" data-max="24" data-val="0" data-default="0"></div>
+              <div class="knob-label">Makeup</div>
+              <div class="knob-value" id="val-comp_makeup">0.0 dB</div>
+            </div>
+
+            <!-- Row 2: Attack, Release -->
+            <div class="knob-wrap" style="left:0px; top:141px;">
+              <div class="knob" data-param="comp_attack" data-min="0.1" data-max="100" data-val="10" data-default="10"></div>
+              <div class="knob-label">Attack</div>
+              <div class="knob-value" id="val-comp_attack">10 ms</div>
+            </div>
+            <div class="knob-wrap" style="left:91px; top:141px;">
+              <div class="knob" data-param="comp_release" data-min="10" data-max="1000" data-val="200" data-default="200"></div>
+              <div class="knob-label">Release</div>
+              <div class="knob-value" id="val-comp_release">200 ms</div>
+            </div>
+
+          </div>
+
+          <!-- GR Meter -->
+          <div class="gr-meter" id="grMeter" style="position:absolute; left:17px; top:246px;">
+            <div class="gr-meter-face">
+              <canvas class="gr-canvas" id="grCanvas" width="190" height="56"></canvas>
+              <div class="gr-meter-label">GR</div>
+              <div class="meter-needle" id="meterNeedle"></div>
+              <div class="meter-pivot"></div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="bypass-wrap" id="bypass-comp" data-section="comp" data-param="comp_bypass">
+          <div class="bypass-led" id="led-comp"></div>
+          <div class="bypass-text">Bypass</div>
+        </div>
+      </div>
+
+      <!-- DELAY SECTION -->
+      <div class="section" id="section-delay">
+        <div class="section-label">Delay</div>
+        <div class="controls-area">
+
+          <div class="pill-switch" id="delay-mode-switch" style="top:0px;">
+            <div class="pill-option active" data-mode="0" id="delay-slapback">Slapback</div>
+            <div class="pill-option" data-mode="1" id="delay-sync">Sync</div>
+          </div>
+
+          <!-- Upper row: Slapback Time knob -->
+          <div class="knob-wrap" id="delay-time-knob" style="left:0px; top:36px;">
+            <div class="knob" data-param="delay_time" data-min="20" data-max="200" data-val="100" data-default="100"></div>
+            <div class="knob-label">Time</div>
+            <div class="knob-value" id="val-delay_time">100 ms</div>
+          </div>
+
+          <!-- Upper row: Sync Division buttons -->
+          <div class="division-group hidden" id="delay-division-group">
+            <button class="division-btn" data-div="0">1/16</button>
+            <button class="division-btn active" data-div="1">1/8</button>
+            <button class="division-btn" data-div="2">1/4</button>
+            <button class="division-btn" data-div="3">1/2</button>
+          </div>
+
+          <!-- Lower row: Feedback + Mix — always visible -->
+          <div class="knob-wrap" style="left:0px; top:141px;">
+            <div class="knob" data-param="delay_feedback" data-min="0" data-max="90" data-val="20" data-default="20"></div>
+            <div class="knob-label">Feedback</div>
+            <div class="knob-value" id="val-delay_feedback">20 %</div>
+          </div>
+          <div class="knob-wrap" style="left:91px; top:141px;">
+            <div class="knob" data-param="delay_mix" data-min="0" data-max="100" data-val="30" data-default="30"></div>
+            <div class="knob-label">Mix</div>
+            <div class="knob-value" id="val-delay_mix">30 %</div>
+          </div>
+
+          <!-- Reverb Send Slider -->
+          <div class="send-slider-wrap" id="sendSliderWrap" style="left:13px; top:240px;">
+            <div class="send-slider-label">
+              <span class="arrow-icon">&#8594;</span>Reverb Send
+            </div>
+            <div class="send-slider-track" id="sendTrack">
+              <div class="send-slider-fill" id="sendFill" style="width:20%;"></div>
+              <div class="send-slider-thumb" id="sendThumb" style="left:20%;"></div>
+            </div>
+            <div class="knob-value" id="val-delay_reverb_send">20 %</div>
+          </div>
+
+        </div>
+
+        <div class="bypass-wrap" id="bypass-delay" data-section="delay" data-param="delay_bypass">
+          <div class="bypass-led" id="led-delay"></div>
+          <div class="bypass-text">Bypass</div>
+        </div>
+      </div>
+
+      <!-- REVERB SECTION -->
+      <div class="section" id="section-reverb">
+        <div class="section-label">Reverb</div>
+        <div class="controls-area">
+
+          <div class="pill-switch" id="reverb-type-switch" style="top:0px;">
+            <div class="pill-option active" data-mode="0" id="reverb-plate">Plate</div>
+            <div class="pill-option" data-mode="1" id="reverb-room">Room</div>
+          </div>
+
+          <!-- Row 1: Pre-Delay, Decay -->
+          <div class="knob-wrap" style="left:0px; top:36px;">
+            <div class="knob" data-param="reverb_predelay" data-min="0" data-max="100" data-val="20" data-default="20"></div>
+            <div class="knob-label">Pre-Dly</div>
+            <div class="knob-value" id="val-reverb_predelay">20 ms</div>
+          </div>
+          <div class="knob-wrap" style="left:91px; top:36px;">
+            <div class="knob" data-param="reverb_decay" data-min="0.3" data-max="8.0" data-val="1.5" data-default="1.5"></div>
+            <div class="knob-label">Decay</div>
+            <div class="knob-value" id="val-reverb_decay">1.50 s</div>
+          </div>
+
+          <!-- Row 2: Damping, Mix -->
+          <div class="knob-wrap" style="left:0px; top:141px;">
+            <div class="knob" data-param="reverb_damping" data-min="0" data-max="100" data-val="50" data-default="50"></div>
+            <div class="knob-label">Damping</div>
+            <div class="knob-value" id="val-reverb_damping">50 %</div>
+          </div>
+          <div class="knob-wrap" style="left:91px; top:141px;">
+            <div class="knob" data-param="reverb_mix" data-min="0" data-max="100" data-val="25" data-default="25"></div>
+            <div class="knob-label">Mix</div>
+            <div class="knob-value" id="val-reverb_mix">25 %</div>
+          </div>
+
+        </div>
+
+        <div class="bypass-wrap" id="bypass-reverb" data-section="reverb" data-param="reverb_bypass">
+          <div class="bypass-led" id="led-reverb"></div>
+          <div class="bypass-text">Bypass</div>
+        </div>
+      </div>
+
+    </div><!-- /sections-strip -->
+  </div><!-- /plugin-shell -->
+
+  <script type="module">
+    "use strict";
+
+    import {
+      getSliderState,
+      getToggleState,
+      getComboBoxState
+    } from "./js/juce/index.js";
+
+    /* ============================================================
+       DISABLE CONTEXT MENU
+    ============================================================ */
+    document.addEventListener("contextmenu", function(e) {
+      e.preventDefault();
+      return false;
+    });
+
+    /* ============================================================
+       VALUE FORMATTER
+    ============================================================ */
+    function formatValue(param, val) {
+      val = parseFloat(val);
+      if (param === "eq_hp_freq" || param.includes("shelf_freq") || param === "eq_mid_freq") {
+        if (val >= 1000) return (val / 1000).toFixed(1) + " kHz";
+        return Math.round(val) + " Hz";
+      }
+      if (param === "reverb_decay") return val.toFixed(2) + " s";
+      if (param === "comp_ratio") return val.toFixed(1) + " :1";
+      if (param === "eq_mid_q") return val.toFixed(2);
+      if (param.includes("gain") || param === "comp_threshold" || param === "comp_makeup") {
+        var sign = val >= 0 ? "+" : "";
+        return (param === "comp_threshold" || val < 0) ? val.toFixed(1) + " dB" : sign + val.toFixed(1) + " dB";
+      }
+      if (param === "delay_time" || param === "reverb_predelay" || param === "comp_attack" || param === "comp_release") {
+        return Math.round(val) + " ms";
+      }
+      return Math.round(val) + " %";
+    }
+
+    /* ============================================================
+       KNOB INDICATOR — JS-only, no CSS ::after
+    ============================================================ */
+    function updateIndicator(knob, rotDeg) {
+      var indicator = knob.querySelector(".knob-indicator");
+      if (!indicator) {
+        var isLarge = knob.classList.contains("large");
+        var knobDiameter = isLarge ? 80 : 62;
+        var indicatorHeight = isLarge ? 36 : 28;
+        var pivotDist = knobDiameter / 2 - 5;
+        indicator = document.createElement("div");
+        indicator.className = "knob-indicator";
+        indicator.style.cssText = [
+          "position:absolute",
+          "width:4px",
+          "height:" + indicatorHeight + "px",
+          "background:linear-gradient(to bottom,#e8be8a,#d4a066)",
+          "border-radius:2px",
+          "top:5px",
+          "left:50%",
+          "box-shadow:0 0 4px rgba(232,190,138,0.65)",
+          "pointer-events:none",
+          "transform-origin:50% " + pivotDist + "px"
+        ].join(";");
+        knob.appendChild(indicator);
+      }
+      indicator.style.transform = "translateX(-50%) rotate(" + rotDeg + "deg)";
+    }
+
+    /* ============================================================
+       KNOB INTERACTION — relative drag (JUCE pattern #16)
+    ============================================================ */
+    var DEG_MIN = -135;
+    var DEG_MAX = 135;
+
+    function normToRot(norm) {
+      return DEG_MIN + norm * (DEG_MAX - DEG_MIN);
+    }
+
+    function setKnobNorm(knob, norm, sliderState) {
+      var min = parseFloat(knob.dataset.min);
+      var max = parseFloat(knob.dataset.max);
+      var val = min + norm * (max - min);
+      knob.dataset.norm = norm;
+      knob.dataset.val = val;
+      updateIndicator(knob, normToRot(norm));
+      var valEl = document.getElementById("val-" + knob.dataset.param);
+      if (valEl) valEl.textContent = formatValue(knob.dataset.param, val);
+    }
+
+    document.querySelectorAll(".knob").forEach(function(knob) {
+      var paramId = knob.dataset.param;
+      var sliderState = getSliderState(paramId);
+
+      // Initialize from default
+      var min = parseFloat(knob.dataset.min);
+      var max = parseFloat(knob.dataset.max);
+      var defVal = parseFloat(knob.dataset.default);
+      var initNorm = (defVal - min) / (max - min);
+
+      if (sliderState) {
+        initNorm = sliderState.getNormalisedValue();
+        // Listen for JUCE-side changes (pattern #15: no callback parameter)
+        sliderState.valueChangedEvent.addListener(function() {
+          setKnobNorm(knob, sliderState.getNormalisedValue(), sliderState);
+        });
+      }
+
+      setKnobNorm(knob, initNorm, sliderState);
+
+      // Relative drag (pattern #16)
+      var lastY = 0;
+      var isDragging = false;
+      var SENSITIVITY = 200; // px for full range
+
+      knob.addEventListener("mousedown", function(e) {
+        e.preventDefault();
+        isDragging = true;
+        lastY = e.clientY;
+        knob.classList.add("dragging");
+
+        function onMove(e) {
+          if (!isDragging) return;
+          var dy = lastY - e.clientY;
+          lastY = e.clientY;
+          var delta = dy / SENSITIVITY;
+          var newNorm = Math.min(1, Math.max(0, parseFloat(knob.dataset.norm) + delta));
+          setKnobNorm(knob, newNorm, sliderState);
+          if (sliderState) sliderState.setNormalisedValue(newNorm);
+        }
+
+        function onUp() {
+          isDragging = false;
+          knob.classList.remove("dragging");
+          document.removeEventListener("mousemove", onMove);
+          document.removeEventListener("mouseup", onUp);
+        }
+
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onUp);
+      });
+
+      // Double-click to reset
+      knob.addEventListener("dblclick", function() {
+        var defVal = parseFloat(knob.dataset.default);
+        var min = parseFloat(knob.dataset.min);
+        var max = parseFloat(knob.dataset.max);
+        var norm = (defVal - min) / (max - min);
+        setKnobNorm(knob, norm, sliderState);
+        if (sliderState) sliderState.setNormalisedValue(norm);
+      });
+    });
+
+    /* ============================================================
+       COMP MODE TOGGLE (comp_mode combo)
+    ============================================================ */
+    (function initCompMode() {
+      var switchEl = document.getElementById("comp-mode-switch");
+      var simpleBtn = document.getElementById("comp-simple");
+      var manualBtn = document.getElementById("comp-manual");
+      var simpleControls = document.getElementById("comp-simple-controls");
+      var manualControls = document.getElementById("comp-manual-controls");
+
+      var compModeState = getComboBoxState("comp_mode");
+      var currentMode = 1; // default: manual
+
+      function setMode(mode) {
+        currentMode = mode;
+        if (mode === 0) {
+          simpleBtn.classList.add("active");
+          manualBtn.classList.remove("active");
+          simpleControls.classList.remove("hidden");
+          manualControls.classList.add("hidden");
+        } else {
+          manualBtn.classList.add("active");
+          simpleBtn.classList.remove("active");
+          manualControls.classList.remove("hidden");
+          simpleControls.classList.add("hidden");
+        }
+      }
+
+      if (compModeState) {
+        currentMode = compModeState.getSelectedId();
+        compModeState.valueChangedEvent.addListener(function() {
+          setMode(compModeState.getSelectedId());
+        });
+      }
+
+      setMode(currentMode);
+
+      switchEl.addEventListener("click", function(e) {
+        var opt = e.target.closest(".pill-option");
+        if (!opt) return;
+        var mode = parseInt(opt.dataset.mode);
+        setMode(mode);
+        if (compModeState) compModeState.setSelectedId(mode);
+      });
+    })();
+
+    /* ============================================================
+       DELAY MODE TOGGLE (delay_mode combo)
+    ============================================================ */
+    (function initDelayMode() {
+      var switchEl = document.getElementById("delay-mode-switch");
+      var slapBtn = document.getElementById("delay-slapback");
+      var syncBtn = document.getElementById("delay-sync");
+      var timeKnob = document.getElementById("delay-time-knob");
+      var divGroup = document.getElementById("delay-division-group");
+
+      var delayModeState = getComboBoxState("delay_mode");
+      var currentMode = 0; // default: slapback
+
+      function setMode(mode) {
+        currentMode = mode;
+        if (mode === 0) {
+          slapBtn.classList.add("active");
+          syncBtn.classList.remove("active");
+          timeKnob.classList.remove("hidden");
+          divGroup.classList.add("hidden");
+        } else {
+          syncBtn.classList.add("active");
+          slapBtn.classList.remove("active");
+          timeKnob.classList.add("hidden");
+          divGroup.classList.remove("hidden");
+        }
+      }
+
+      if (delayModeState) {
+        currentMode = delayModeState.getSelectedId();
+        delayModeState.valueChangedEvent.addListener(function() {
+          setMode(delayModeState.getSelectedId());
+        });
+      }
+
+      setMode(currentMode);
+
+      switchEl.addEventListener("click", function(e) {
+        var opt = e.target.closest(".pill-option");
+        if (!opt) return;
+        var mode = parseInt(opt.dataset.mode);
+        setMode(mode);
+        if (delayModeState) delayModeState.setSelectedId(mode);
+      });
+
+      // delay_division combo
+      var divisionState = getComboBoxState("delay_division");
+      var currentDiv = divisionState ? divisionState.getSelectedId() : 1;
+
+      if (divisionState) {
+        divisionState.valueChangedEvent.addListener(function() {
+          currentDiv = divisionState.getSelectedId();
+          divGroup.querySelectorAll(".division-btn").forEach(function(b) {
+            b.classList.toggle("active", parseInt(b.dataset.div) === currentDiv);
+          });
+        });
+      }
+
+      // Set initial division highlight
+      divGroup.querySelectorAll(".division-btn").forEach(function(b) {
+        b.classList.toggle("active", parseInt(b.dataset.div) === currentDiv);
+      });
+
+      divGroup.addEventListener("click", function(e) {
+        var btn = e.target.closest(".division-btn");
+        if (!btn) return;
+        currentDiv = parseInt(btn.dataset.div);
+        divGroup.querySelectorAll(".division-btn").forEach(function(b) { b.classList.remove("active"); });
+        btn.classList.add("active");
+        if (divisionState) divisionState.setSelectedId(currentDiv);
+      });
+    })();
+
+    /* ============================================================
+       REVERB TYPE TOGGLE (reverb_type combo)
+    ============================================================ */
+    (function initReverbType() {
+      var switchEl = document.getElementById("reverb-type-switch");
+      var reverbTypeState = getComboBoxState("reverb_type");
+      var currentType = 0;
+
+      function setType(type) {
+        currentType = type;
+        switchEl.querySelectorAll(".pill-option").forEach(function(o) {
+          o.classList.toggle("active", parseInt(o.dataset.mode) === type);
+        });
+      }
+
+      if (reverbTypeState) {
+        currentType = reverbTypeState.getSelectedId();
+        reverbTypeState.valueChangedEvent.addListener(function() {
+          setType(reverbTypeState.getSelectedId());
+        });
+      }
+
+      setType(currentType);
+
+      switchEl.addEventListener("click", function(e) {
+        var opt = e.target.closest(".pill-option");
+        if (!opt) return;
+        var type = parseInt(opt.dataset.mode);
+        setType(type);
+        if (reverbTypeState) reverbTypeState.setSelectedId(type);
+      });
+    })();
+
+    /* ============================================================
+       BYPASS LED TOGGLES — use getToggleState (pattern #19)
+    ============================================================ */
+    (function initBypass() {
+      document.querySelectorAll(".bypass-wrap").forEach(function(wrap) {
+        var led = wrap.querySelector(".bypass-led");
+        var paramId = wrap.dataset.param;
+        var toggleState = getToggleState(paramId);
+        var active = false;
+
+        if (toggleState) {
+          active = toggleState.getValue();
+          led.classList.toggle("active", active);
+          toggleState.valueChangedEvent.addListener(function() {
+            active = toggleState.getValue();
+            led.classList.toggle("active", active);
+          });
+        }
+
+        wrap.addEventListener("click", function() {
+          active = !active;
+          led.classList.toggle("active", active);
+          if (toggleState) toggleState.setValue(active);
+        });
+      });
+    })();
+
+    /* ============================================================
+       GR METER — animated needle (decorative, driven by idle animation)
+       In production, drive this from a JUCE native function callback.
+    ============================================================ */
+    (function initGRMeter() {
+      var needle = document.getElementById("meterNeedle");
+      var canvas = document.getElementById("grCanvas");
+      var ctx = canvas.getContext("2d");
+
+      function drawScale() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        var cx = canvas.width / 2;
+        var cy = canvas.height - 4;
+        var r = 44;
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI);
+        ctx.strokeStyle = "rgba(232,190,138,0.18)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        var dBMarks = [0, -3, -6, -12, -20];
+        var maxdB = 0;
+        var mindB = -20;
+
+        dBMarks.forEach(function(db) {
+          var norm = (db - mindB) / (maxdB - mindB);
+          var angle = Math.PI + norm * Math.PI;
+          var tickLen = db === 0 ? 10 : 7;
+          var x1 = cx + r * Math.cos(angle);
+          var y1 = cy + r * Math.sin(angle);
+          var x2 = cx + (r - tickLen) * Math.cos(angle);
+          var y2 = cy + (r - tickLen) * Math.sin(angle);
+
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.strokeStyle = db === 0 ? "rgba(232,190,138,0.65)" : "rgba(232,190,138,0.38)";
+          ctx.lineWidth = db === 0 ? 1.5 : 1;
+          ctx.stroke();
+
+          var labelR = r - 16;
+          ctx.fillStyle = "rgba(184,136,72,0.65)";
+          ctx.font = "6px Helvetica Neue, sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(Math.abs(db), cx + labelR * Math.cos(angle), cy + labelR * Math.sin(angle));
+        });
+      }
+
+      drawScale();
+
+      var targetAngle = -50;
+      var currentAngle = -50;
+      var velocity = 0;
+      var ATTACK = 0.12;
+      var RELEASE = 0.05;
+
+      // requestAnimationFrame loop (pattern #20)
+      function animateNeedle() {
+        var diff = targetAngle - currentAngle;
+        velocity += diff * (diff > 0 ? ATTACK : RELEASE);
+        velocity *= 0.72;
+        currentAngle += velocity;
+        currentAngle = Math.max(-50, Math.min(50, currentAngle));
+        needle.style.transform = "translateX(-50%) rotate(" + currentAngle + "deg)";
+        requestAnimationFrame(animateNeedle);
+      }
+
+      animateNeedle();
+
+      function idleDrift() {
+        var drift = (Math.random() - 0.5) * 4;
+        targetAngle = Math.max(-52, Math.min(-44, -48 + drift));
+      }
+
+      setInterval(idleDrift, 120);
+    })();
+
+    /* ============================================================
+       SEND SLIDER — delay_reverb_send
+    ============================================================ */
+    (function initSendSlider() {
+      var track = document.getElementById("sendTrack");
+      var thumb = document.getElementById("sendThumb");
+      var fill = document.getElementById("sendFill");
+      var valEl = document.getElementById("val-delay_reverb_send");
+
+      var sendState = getSliderState("delay_reverb_send");
+      var norm = sendState ? sendState.getNormalisedValue() : 0.20;
+      var dragging = false;
+
+      function updateSlider(n) {
+        norm = Math.min(1, Math.max(0, n));
+        var pct = (norm * 100).toFixed(1);
+        thumb.style.left = pct + "%";
+        fill.style.width = pct + "%";
+        valEl.textContent = Math.round(norm * 100) + " %";
+      }
+
+      if (sendState) {
+        sendState.valueChangedEvent.addListener(function() {
+          updateSlider(sendState.getNormalisedValue());
+        });
+      }
+
+      updateSlider(norm);
+
+      track.addEventListener("mousedown", function(e) {
+        dragging = true;
+        e.preventDefault();
+        updateFromEvent(e);
+
+        function onMove(e) {
+          if (!dragging) return;
+          updateFromEvent(e);
+        }
+
+        function onUp() {
+          dragging = false;
+          document.removeEventListener("mousemove", onMove);
+          document.removeEventListener("mouseup", onUp);
+        }
+
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onUp);
+      });
+
+      function updateFromEvent(e) {
+        var rect = track.getBoundingClientRect();
+        var x = e.clientX - rect.left;
+        var n = x / rect.width;
+        updateSlider(n);
+        if (sendState) sendState.setNormalisedValue(n);
+      }
+    })();
+
+    /* ============================================================
+       PRESET SELECTOR (decorative — JUCE preset management via APVTS)
+    ============================================================ */
+    (function initPreset() {
+      var btn = document.getElementById("presetBtn");
+      var dropdown = document.getElementById("presetDropdown");
+      var label = document.getElementById("presetLabel");
+
+      btn.addEventListener("click", function(e) {
+        e.stopPropagation();
+        dropdown.classList.toggle("open");
+      });
+
+      dropdown.querySelectorAll(".preset-option").forEach(function(opt) {
+        opt.addEventListener("click", function() {
+          label.textContent = opt.dataset.preset;
+          dropdown.classList.remove("open");
+        });
+      });
+
+      document.addEventListener("click", function() {
+        dropdown.classList.remove("open");
+      });
+    })();
+
+  </script>
+</body>
+</html>
