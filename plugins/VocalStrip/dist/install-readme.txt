@@ -1,14 +1,14 @@
-VocalStrip v1.0.0 by TÂCHES
-============================
+VocalStrip v1.0.0 by Barking Hill
+==================================
 
 WHAT'S IN THIS FOLDER
 ----------------------
-VocalStrip-by-TACHES.pkg  — macOS installer (VST3 + AU)
-install-readme.txt         — this file
+VocalStrip-by-Barking-Hill.pkg  — macOS installer (VST3 + AU)
+install-readme.txt               — this file
 
 HOW TO INSTALL
 --------------
-1. Double-click VocalStrip-by-TACHES.pkg
+1. Double-click VocalStrip-by-Barking-Hill.pkg
 2. Follow the installer (Welcome → ReadMe → Install)
 3. Enter your Mac password when prompted
 
