@@ -621,50 +621,40 @@
         <div class="section-label">EQ</div>
         <div class="controls-area">
 
-          <!-- Row 1: HP, Low Shelf Gain, Low Shelf Freq -->
+          <!-- Row 1 (top): Hi Gain — fixed 10 kHz -->
           <div class="knob-wrap" style="left:0px; top:0px;">
-            <div class="knob" data-param="eq_hp_freq" data-min="20" data-max="500" data-val="80" data-default="80"></div>
-            <div class="knob-label">HP</div>
-            <div class="knob-value" id="val-eq_hp_freq">80 Hz</div>
+            <div class="knob" data-param="eq_high_shelf_gain" data-min="-20" data-max="20" data-val="0" data-default="0"></div>
+            <div class="knob-label">Hi Gain</div>
+            <div class="knob-value" id="val-eq_high_shelf_gain">0.0 dB</div>
           </div>
-          <div class="knob-wrap" style="left:91px; top:0px;">
-            <div class="knob" data-param="eq_low_shelf_gain" data-min="-12" data-max="12" data-val="0" data-default="0"></div>
-            <div class="knob-label">Low Gain</div>
-            <div class="knob-value" id="val-eq_low_shelf_gain">0.0 dB</div>
-          </div>
-          <div class="knob-wrap" style="left:182px; top:0px;">
-            <div class="knob" data-param="eq_low_shelf_freq" data-min="60" data-max="400" data-val="200" data-default="200"></div>
-            <div class="knob-label">Low Freq</div>
-            <div class="knob-value" id="val-eq_low_shelf_freq">200 Hz</div>
-          </div>
+          <div style="position:absolute; left:66px; top:36px; font-size:8px; letter-spacing:0.2em; color:rgba(212,160,102,0.4); text-transform:uppercase;">10 kHz</div>
 
-          <!-- Row 2: Mid Gain, Mid Freq, Mid Q -->
+          <!-- Row 2 (middle): Mid Gain, Mid Freq — Q fixed at 1.0 -->
           <div class="knob-wrap" style="left:0px; top:105px;">
-            <div class="knob" data-param="eq_mid_gain" data-min="-12" data-max="12" data-val="0" data-default="0"></div>
+            <div class="knob" data-param="eq_mid_gain" data-min="-20" data-max="20" data-val="0" data-default="0"></div>
             <div class="knob-label">Mid Gain</div>
             <div class="knob-value" id="val-eq_mid_gain">0.0 dB</div>
           </div>
-          <div class="knob-wrap" style="left:91px; top:105px;">
+          <div class="knob-wrap" style="left:182px; top:105px;">
             <div class="knob" data-param="eq_mid_freq" data-min="200" data-max="8000" data-val="1000" data-default="1000"></div>
             <div class="knob-label">Mid Freq</div>
             <div class="knob-value" id="val-eq_mid_freq">1000 Hz</div>
           </div>
-          <div class="knob-wrap" style="left:182px; top:105px;">
-            <div class="knob" data-param="eq_mid_q" data-min="0.3" data-max="5.0" data-val="1.0" data-default="1.0"></div>
-            <div class="knob-label">Mid Q</div>
-            <div class="knob-value" id="val-eq_mid_q">1.00</div>
-          </div>
 
-          <!-- Row 3: Hi Shelf Gain, Hi Shelf Freq (centered) -->
-          <div class="knob-wrap" style="left:36px; top:210px;">
-            <div class="knob" data-param="eq_high_shelf_gain" data-min="-12" data-max="12" data-val="0" data-default="0"></div>
-            <div class="knob-label">Hi Gain</div>
-            <div class="knob-value" id="val-eq_high_shelf_gain">0.0 dB</div>
+          <!-- Row 3 (bottom): HP on/off + Low Gain — Low fixed 150 Hz, HP fixed 100 Hz -->
+          <div class="knob-wrap" style="left:0px; top:210px;">
+            <div class="knob" data-param="eq_low_shelf_gain" data-min="-20" data-max="20" data-val="0" data-default="0"></div>
+            <div class="knob-label">Low Gain</div>
+            <div class="knob-value" id="val-eq_low_shelf_gain">0.0 dB</div>
           </div>
-          <div class="knob-wrap" style="left:146px; top:210px;">
-            <div class="knob" data-param="eq_high_shelf_freq" data-min="2000" data-max="16000" data-val="8000" data-default="8000"></div>
-            <div class="knob-label">Hi Freq</div>
-            <div class="knob-value" id="val-eq_high_shelf_freq">8.0 kHz</div>
+          <div style="position:absolute; left:66px; top:246px; font-size:8px; letter-spacing:0.2em; color:rgba(212,160,102,0.4); text-transform:uppercase;">150 Hz</div>
+
+          <!-- HP on/off switch -->
+          <div id="hp-enable-btn" data-param="eq_hp_enable"
+               style="position:absolute; right:0px; top:216px; width:62px; display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;">
+            <div class="bypass-led" id="led-hp-enable" style="width:14px; height:14px;"></div>
+            <div class="knob-label" style="margin-top:0;">HP</div>
+            <div style="font-size:8px; letter-spacing:0.2em; color:rgba(212,160,102,0.4); text-transform:uppercase; text-align:center;">100 Hz</div>
           </div>
 
         </div>
@@ -868,13 +858,12 @@
     ============================================================ */
     function formatValue(param, val) {
       val = parseFloat(val);
-      if (param === "eq_hp_freq" || param.includes("shelf_freq") || param === "eq_mid_freq") {
+      if (param === "eq_mid_freq") {
         if (val >= 1000) return (val / 1000).toFixed(1) + " kHz";
         return Math.round(val) + " Hz";
       }
       if (param === "reverb_decay") return val.toFixed(2) + " s";
       if (param === "comp_ratio") return val.toFixed(1) + " :1";
-      if (param === "eq_mid_q") return val.toFixed(2);
       if (param.includes("gain") || param === "comp_threshold" || param === "comp_makeup") {
         var sign = val >= 0 ? "+" : "";
         return (param === "comp_threshold" || val < 0) ? val.toFixed(1) + " dB" : sign + val.toFixed(1) + " dB";
@@ -1174,6 +1163,40 @@
           led.classList.toggle("active", active);
           if (toggleState) toggleState.setValue(active);
         });
+      });
+    })();
+
+    /* ============================================================
+       HP ENABLE TOGGLE — on/off switch for fixed 100 Hz HP filter
+    ============================================================ */
+    (function initHpEnable() {
+      var btn = document.getElementById("hp-enable-btn");
+      var led = document.getElementById("led-hp-enable");
+      if (!btn || !led) return;
+
+      var hpState = getToggleState("eq_hp_enable");
+      var enabled = true; // default: HP enabled
+
+      function updateLed(val) {
+        // LED lit (red) = HP is ON
+        led.classList.toggle("active", val);
+      }
+
+      if (hpState) {
+        enabled = hpState.getValue();
+        updateLed(enabled);
+        hpState.valueChangedEvent.addListener(function() {
+          enabled = hpState.getValue();
+          updateLed(enabled);
+        });
+      } else {
+        updateLed(enabled);
+      }
+
+      btn.addEventListener("click", function() {
+        enabled = !enabled;
+        updateLed(enabled);
+        if (hpState) hpState.setValue(enabled);
       });
     })();
 

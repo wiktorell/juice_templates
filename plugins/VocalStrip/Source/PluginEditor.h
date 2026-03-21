@@ -26,14 +26,11 @@ private:
     // ========================================================================
 
     // EQ Section
-    std::unique_ptr<juce::WebSliderRelay>        eqHpFreqRelay;
+    std::unique_ptr<juce::WebToggleButtonRelay>  eqHpEnableRelay;
     std::unique_ptr<juce::WebSliderRelay>        eqLowShelfGainRelay;
-    std::unique_ptr<juce::WebSliderRelay>        eqLowShelfFreqRelay;
     std::unique_ptr<juce::WebSliderRelay>        eqMidGainRelay;
     std::unique_ptr<juce::WebSliderRelay>        eqMidFreqRelay;
-    std::unique_ptr<juce::WebSliderRelay>        eqMidQRelay;
     std::unique_ptr<juce::WebSliderRelay>        eqHighShelfGainRelay;
-    std::unique_ptr<juce::WebSliderRelay>        eqHighShelfFreqRelay;
     std::unique_ptr<juce::WebToggleButtonRelay>  eqBypassRelay;
 
     // Compressor Section
@@ -73,14 +70,11 @@ private:
     // ========================================================================
 
     // EQ attachments
-    std::unique_ptr<juce::WebSliderParameterAttachment>       eqHpFreqAttachment;
+    std::unique_ptr<juce::WebToggleButtonParameterAttachment> eqHpEnableAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment>       eqLowShelfGainAttachment;
-    std::unique_ptr<juce::WebSliderParameterAttachment>       eqLowShelfFreqAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment>       eqMidGainAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment>       eqMidFreqAttachment;
-    std::unique_ptr<juce::WebSliderParameterAttachment>       eqMidQAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment>       eqHighShelfGainAttachment;
-    std::unique_ptr<juce::WebSliderParameterAttachment>       eqHighShelfFreqAttachment;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> eqBypassAttachment;
 
     // Compressor attachments

@@ -13,38 +13,45 @@ juce::AudioProcessorValueTreeState::ParameterLayout VocalStripAudioProcessor::cr
     // EQ Section — 8 Float + 1 Bool = 9 parameters
     // =========================================================================
 
-    // eq_hp_freq — High-pass filter cutoff (Butterworth)
+    // eq_hp_freq — High-pass filter cutoff (kept for state compatibility, DSP uses fixed 100 Hz)
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID { "eq_hp_freq", 1 },
         "HP Freq",
         juce::NormalisableRange<float>(20.0f, 500.0f, 0.1f, 1.0f),
-        80.0f,
+        100.0f,
         "Hz"
     ));
 
-    // eq_low_shelf_gain — Low shelf boost/cut
+    // eq_hp_enable — HP filter on/off switch (fixed at 100 Hz)
+    params.push_back(std::make_unique<juce::AudioParameterBool>(
+        juce::ParameterID { "eq_hp_enable", 1 },
+        "HP Enable",
+        true
+    ));
+
+    // eq_low_shelf_gain — Low shelf boost/cut (-20 to +20 dB)
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID { "eq_low_shelf_gain", 1 },
         "Low Shelf Gain",
-        juce::NormalisableRange<float>(-12.0f, 12.0f, 0.1f, 1.0f),
+        juce::NormalisableRange<float>(-20.0f, 20.0f, 0.1f, 1.0f),
         0.0f,
         "dB"
     ));
 
-    // eq_low_shelf_freq — Low shelf frequency
+    // eq_low_shelf_freq — Low shelf frequency (kept for state compatibility, DSP uses fixed 150 Hz)
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID { "eq_low_shelf_freq", 1 },
         "Low Shelf Freq",
         juce::NormalisableRange<float>(60.0f, 400.0f, 0.1f, 1.0f),
-        200.0f,
+        150.0f,
         "Hz"
     ));
 
-    // eq_mid_gain — Mid peak boost/cut
+    // eq_mid_gain — Mid peak boost/cut (-20 to +20 dB)
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID { "eq_mid_gain", 1 },
         "Mid Gain",
-        juce::NormalisableRange<float>(-12.0f, 12.0f, 0.1f, 1.0f),
+        juce::NormalisableRange<float>(-20.0f, 20.0f, 0.1f, 1.0f),
         0.0f,
         "dB"
     ));
@@ -58,7 +65,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout VocalStripAudioProcessor::cr
         "Hz"
     ));
 
-    // eq_mid_q — Mid peak bandwidth (Q factor)
+    // eq_mid_q — Mid peak bandwidth (kept for state compatibility, DSP uses fixed Q=1.0)
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID { "eq_mid_q", 1 },
         "Mid Q",
@@ -67,21 +74,21 @@ juce::AudioProcessorValueTreeState::ParameterLayout VocalStripAudioProcessor::cr
         ""
     ));
 
-    // eq_high_shelf_gain — High shelf boost/cut
+    // eq_high_shelf_gain — High shelf boost/cut (-20 to +20 dB)
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID { "eq_high_shelf_gain", 1 },
         "Hi Shelf Gain",
-        juce::NormalisableRange<float>(-12.0f, 12.0f, 0.1f, 1.0f),
+        juce::NormalisableRange<float>(-20.0f, 20.0f, 0.1f, 1.0f),
         0.0f,
         "dB"
     ));
 
-    // eq_high_shelf_freq — High shelf frequency
+    // eq_high_shelf_freq — High shelf frequency (kept for state compatibility, DSP uses fixed 10 kHz)
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID { "eq_high_shelf_freq", 1 },
         "Hi Shelf Freq",
         juce::NormalisableRange<float>(2000.0f, 16000.0f, 1.0f, 1.0f),
-        8000.0f,
+        10000.0f,
         "Hz"
     ));
 
@@ -423,15 +430,18 @@ void VocalStripAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // =========================================================================
     // Read EQ parameters (atomic, real-time safe)
     // =========================================================================
-    const auto eqHpFreq  = parameters.getRawParameterValue("eq_hp_freq")->load();
+    const bool eqHpEnable = parameters.getRawParameterValue("eq_hp_enable")->load() > 0.5f;
     const auto eqLsGain  = parameters.getRawParameterValue("eq_low_shelf_gain")->load();
-    const auto eqLsFreq  = parameters.getRawParameterValue("eq_low_shelf_freq")->load();
     const auto eqMidGain = parameters.getRawParameterValue("eq_mid_gain")->load();
     const auto eqMidFreq = parameters.getRawParameterValue("eq_mid_freq")->load();
-    const auto eqMidQ    = parameters.getRawParameterValue("eq_mid_q")->load();
     const auto eqHsGain  = parameters.getRawParameterValue("eq_high_shelf_gain")->load();
-    const auto eqHsFreq  = parameters.getRawParameterValue("eq_high_shelf_freq")->load();
     const bool eqBypass  = parameters.getRawParameterValue("eq_bypass")->load() > 0.5f;
+
+    // Fixed EQ frequencies (not user-controllable)
+    constexpr float HP_FREQ   = 100.0f;
+    constexpr float LS_FREQ   = 150.0f;
+    constexpr float MID_Q     = 1.0f;
+    constexpr float HS_FREQ   = 10000.0f;
 
     // =========================================================================
     // Read Compressor parameters (atomic, real-time safe)
@@ -451,26 +461,31 @@ void VocalStripAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     if (!eqBypass)
     {
         // Update filter coefficients (per-block, not per-sample)
-        *hpFilter.coefficients = *juce::dsp::IIR::Coefficients<float>::makeHighPass(
-            currentSampleRate, eqHpFreq);
+        // HP filter: fixed at 100 Hz, only applied when enabled
+        if (eqHpEnable)
+        {
+            *hpFilter.coefficients = *juce::dsp::IIR::Coefficients<float>::makeHighPass(
+                currentSampleRate, HP_FREQ);
+        }
 
         *lsFilter.coefficients = *juce::dsp::IIR::Coefficients<float>::makeLowShelf(
-            currentSampleRate, eqLsFreq, 0.7071f,
+            currentSampleRate, LS_FREQ, 0.7071f,
             juce::Decibels::decibelsToGain(eqLsGain));
 
         *midFilter.coefficients = *juce::dsp::IIR::Coefficients<float>::makePeakFilter(
-            currentSampleRate, eqMidFreq, eqMidQ,
+            currentSampleRate, eqMidFreq, MID_Q,
             juce::Decibels::decibelsToGain(eqMidGain));
 
         *hsFilter.coefficients = *juce::dsp::IIR::Coefficients<float>::makeHighShelf(
-            currentSampleRate, eqHsFreq, 0.7071f,
+            currentSampleRate, HS_FREQ, 0.7071f,
             juce::Decibels::decibelsToGain(eqHsGain));
 
-        // Process mono channel 0 through all 4 filters in series
+        // Process mono channel 0 through filters in series
         auto monoBlock = juce::dsp::AudioBlock<float>(buffer).getSingleChannelBlock(0);
         juce::dsp::ProcessContextReplacing<float> monoContext(monoBlock);
 
-        hpFilter.process(monoContext);
+        if (eqHpEnable)
+            hpFilter.process(monoContext);
         lsFilter.process(monoContext);
         midFilter.process(monoContext);
         hsFilter.process(monoContext);

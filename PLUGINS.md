@@ -42,7 +42,7 @@
 | PadForge | 💡 Ideated | - | Synth (Instrument) | 2025-11-14 |
 | AngelGrain | 📦 Installed | 1.0.0 | Audio Effect (Granular Delay) | 2025-11-19 |
 | BarkingHillLFOSync | 📦 Installed | 2.0.0 | MIDI FX (LFO Modulator) | 2026-02-28 |
-| VocalStrip | 📦 Installed | 1.0.0 | Audio Effect (Vocal Channel Strip) | 2026-03-21 |
+| VocalStrip | 📦 Installed | 1.1.0 | Audio Effect (Vocal Channel Strip) | 2026-03-21 |
 
 **For detailed plugin information (lifecycle timeline, known issues, parameters, etc.), see:**
 `plugins/[PluginName]/NOTES.md`

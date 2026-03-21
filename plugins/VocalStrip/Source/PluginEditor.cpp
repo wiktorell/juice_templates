@@ -29,14 +29,11 @@ VocalStripAudioProcessorEditor::VocalStripAudioProcessorEditor (VocalStripAudioP
       // ======================================================================
 
       // EQ relays
-      eqHpFreqRelay        (std::make_unique<juce::WebSliderRelay>      ("eq_hp_freq")),
+      eqHpEnableRelay      (std::make_unique<juce::WebToggleButtonRelay>("eq_hp_enable")),
       eqLowShelfGainRelay  (std::make_unique<juce::WebSliderRelay>      ("eq_low_shelf_gain")),
-      eqLowShelfFreqRelay  (std::make_unique<juce::WebSliderRelay>      ("eq_low_shelf_freq")),
       eqMidGainRelay       (std::make_unique<juce::WebSliderRelay>      ("eq_mid_gain")),
       eqMidFreqRelay       (std::make_unique<juce::WebSliderRelay>      ("eq_mid_freq")),
-      eqMidQRelay          (std::make_unique<juce::WebSliderRelay>      ("eq_mid_q")),
       eqHighShelfGainRelay (std::make_unique<juce::WebSliderRelay>      ("eq_high_shelf_gain")),
-      eqHighShelfFreqRelay (std::make_unique<juce::WebSliderRelay>      ("eq_high_shelf_freq")),
       eqBypassRelay        (std::make_unique<juce::WebToggleButtonRelay>("eq_bypass")),
 
       // Compressor relays
@@ -79,14 +76,11 @@ VocalStripAudioProcessorEditor::VocalStripAudioProcessorEditor (VocalStripAudioP
                   [this] (const juce::String& url) { return getResource (url); },
                   juce::WebBrowserComponent::getResourceProviderRoot())
               // EQ relays
-              .withOptionsFrom (*eqHpFreqRelay)
+              .withOptionsFrom (*eqHpEnableRelay)
               .withOptionsFrom (*eqLowShelfGainRelay)
-              .withOptionsFrom (*eqLowShelfFreqRelay)
               .withOptionsFrom (*eqMidGainRelay)
               .withOptionsFrom (*eqMidFreqRelay)
-              .withOptionsFrom (*eqMidQRelay)
               .withOptionsFrom (*eqHighShelfGainRelay)
-              .withOptionsFrom (*eqHighShelfFreqRelay)
               .withOptionsFrom (*eqBypassRelay)
               // Compressor relays
               .withOptionsFrom (*compModeRelay)
@@ -122,22 +116,16 @@ VocalStripAudioProcessorEditor::VocalStripAudioProcessorEditor (VocalStripAudioP
       // ======================================================================
 
       // EQ attachments
-      eqHpFreqAttachment (std::make_unique<juce::WebSliderParameterAttachment> (
-          *audioProcessor.parameters.getParameter ("eq_hp_freq"),       *eqHpFreqRelay,        nullptr)),
+      eqHpEnableAttachment (std::make_unique<juce::WebToggleButtonParameterAttachment> (
+          *audioProcessor.parameters.getParameter ("eq_hp_enable"),      *eqHpEnableRelay,      nullptr)),
       eqLowShelfGainAttachment (std::make_unique<juce::WebSliderParameterAttachment> (
           *audioProcessor.parameters.getParameter ("eq_low_shelf_gain"), *eqLowShelfGainRelay,  nullptr)),
-      eqLowShelfFreqAttachment (std::make_unique<juce::WebSliderParameterAttachment> (
-          *audioProcessor.parameters.getParameter ("eq_low_shelf_freq"), *eqLowShelfFreqRelay,  nullptr)),
       eqMidGainAttachment (std::make_unique<juce::WebSliderParameterAttachment> (
           *audioProcessor.parameters.getParameter ("eq_mid_gain"),       *eqMidGainRelay,       nullptr)),
       eqMidFreqAttachment (std::make_unique<juce::WebSliderParameterAttachment> (
           *audioProcessor.parameters.getParameter ("eq_mid_freq"),       *eqMidFreqRelay,       nullptr)),
-      eqMidQAttachment (std::make_unique<juce::WebSliderParameterAttachment> (
-          *audioProcessor.parameters.getParameter ("eq_mid_q"),          *eqMidQRelay,          nullptr)),
       eqHighShelfGainAttachment (std::make_unique<juce::WebSliderParameterAttachment> (
           *audioProcessor.parameters.getParameter ("eq_high_shelf_gain"),*eqHighShelfGainRelay, nullptr)),
-      eqHighShelfFreqAttachment (std::make_unique<juce::WebSliderParameterAttachment> (
-          *audioProcessor.parameters.getParameter ("eq_high_shelf_freq"),*eqHighShelfFreqRelay, nullptr)),
       eqBypassAttachment (std::make_unique<juce::WebToggleButtonParameterAttachment> (
           *audioProcessor.parameters.getParameter ("eq_bypass"),         *eqBypassRelay,        nullptr)),
 
