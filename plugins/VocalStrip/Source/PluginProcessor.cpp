@@ -218,7 +218,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout VocalStripAudioProcessor::cr
         juce::ParameterID { "delay_mix", 1 },
         "Delay Mix",
         juce::NormalisableRange<float>(0.0f, 100.0f, 0.1f, 1.0f),
-        30.0f,
+        0.0f,
         "%"
     ));
 
