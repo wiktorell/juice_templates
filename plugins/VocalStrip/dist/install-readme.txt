@@ -1,4 +1,4 @@
-VocalStrip v1.0.0 by Barking Hill
+VocalStrip v1.3.0 by Barking Hill
 ==================================
 
 WHAT'S IN THIS FOLDER
@@ -9,43 +9,19 @@ install-readme.txt               — this file
 HOW TO INSTALL
 --------------
 1. Double-click VocalStrip-by-Barking-Hill.pkg
-2. Follow the installer (Welcome → ReadMe → Install)
-3. Enter your Mac password when prompted
+2. Follow the installer steps
+3. Open your DAW and scan for new plugins
 
-FIRST USE — GATEKEEPER BYPASS
-------------------------------
-Because this plugin is not notarized by Apple, macOS will block
-it the first time your DAW tries to load it.
+GATEKEEPER (macOS security)
+----------------------------
+If macOS blocks the plugin on first use:
+1. System Settings → Privacy & Security
+2. Click "Open Anyway" next to VocalStrip
+3. Confirm with "Open"
 
-To authorize:
-1. Open your DAW and load VocalStrip
-2. macOS shows "VocalStrip was blocked"
-3. Open System Settings > Privacy & Security
-4. Scroll down → click "Open Anyway" next to VocalStrip
-5. Confirm → plugin loads normally from now on
+WHAT'S INSTALLED
+----------------
+VST3: /Library/Audio/Plug-Ins/VST3/VocalStrip.vst3
+AU:   /Library/Audio/Plug-Ins/Components/VocalStrip.component
 
-Repeat for VST3 and AU if needed (one-time step per format).
-
-WHAT IT DOES
-------------
-VocalStrip is a complete vocal channel strip:
-  Mono Input → EQ → Compressor → Delay → Reverb → Stereo Output
-
-• Semi-parametric EQ (HP + low shelf + mid peak + hi shelf)
-• VCA compressor with Simple (one-knob) and Manual modes
-• GR meter (VU needle, real gain reduction)
-• Delay: Slapback (20–200ms) or Tempo-Sync (1/16, 1/8, 1/4, 1/2)
-• Reverb: Plate and Room with pre-delay
-• Delay→Reverb send slider
-• 3 starter presets: Pop Vocal, Rock Vocal, Intimate
-
-SYSTEM REQUIREMENTS
--------------------
-• macOS 14.6 or later
-• Any VST3 or AU compatible DAW
-
-SUPPORT
--------
-Questions? Contact TÂCHES.
-
-Enjoy!
+— Barking Hill
