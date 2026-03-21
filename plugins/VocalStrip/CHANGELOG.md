@@ -1,5 +1,14 @@
 # VocalStrip Changelog
 
+## [1.3.0] — 2026-03-21
+
+### Changed
+- Delay simplified: Slapback/Sync mode switch removed — always milliseconds
+- Delay time maximum extended: 200 ms → 250 ms
+- Reverb send removed from UI and hardcoded to 0 in DSP
+- 3 knobs (Time, Feedback, Mix) now at top:105px — same horizontal row as Comp and EQ Mid
+- Retained: delay_mode, delay_division, delay_reverb_send APVTS parameters for state compatibility
+
 ## [1.2.0] — 2026-03-21
 
 ### Changed

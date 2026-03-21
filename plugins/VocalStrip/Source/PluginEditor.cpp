@@ -43,12 +43,9 @@ VocalStripAudioProcessorEditor::VocalStripAudioProcessorEditor (VocalStripAudioP
       compBypassRelay      (std::make_unique<juce::WebToggleButtonRelay>("comp_bypass")),
 
       // Delay relays
-      delayModeRelay       (std::make_unique<juce::WebComboBoxRelay>    ("delay_mode")),
       delayTimeRelay       (std::make_unique<juce::WebSliderRelay>      ("delay_time")),
-      delayDivisionRelay   (std::make_unique<juce::WebComboBoxRelay>    ("delay_division")),
       delayFeedbackRelay   (std::make_unique<juce::WebSliderRelay>      ("delay_feedback")),
       delayMixRelay        (std::make_unique<juce::WebSliderRelay>      ("delay_mix")),
-      delayReverbSendRelay (std::make_unique<juce::WebSliderRelay>      ("delay_reverb_send")),
       delayBypassRelay     (std::make_unique<juce::WebToggleButtonRelay>("delay_bypass")),
 
       // Reverb relays
@@ -84,12 +81,9 @@ VocalStripAudioProcessorEditor::VocalStripAudioProcessorEditor (VocalStripAudioP
               .withOptionsFrom (*compReleaseRelay)
               .withOptionsFrom (*compBypassRelay)
               // Delay relays
-              .withOptionsFrom (*delayModeRelay)
               .withOptionsFrom (*delayTimeRelay)
-              .withOptionsFrom (*delayDivisionRelay)
               .withOptionsFrom (*delayFeedbackRelay)
               .withOptionsFrom (*delayMixRelay)
-              .withOptionsFrom (*delayReverbSendRelay)
               .withOptionsFrom (*delayBypassRelay)
               // Reverb relays
               .withOptionsFrom (*reverbTypeRelay)
@@ -132,18 +126,12 @@ VocalStripAudioProcessorEditor::VocalStripAudioProcessorEditor (VocalStripAudioP
           *audioProcessor.parameters.getParameter ("comp_bypass"),       *compBypassRelay,      nullptr)),
 
       // Delay attachments
-      delayModeAttachment (std::make_unique<juce::WebComboBoxParameterAttachment> (
-          *audioProcessor.parameters.getParameter ("delay_mode"),        *delayModeRelay,       nullptr)),
       delayTimeAttachment (std::make_unique<juce::WebSliderParameterAttachment> (
           *audioProcessor.parameters.getParameter ("delay_time"),        *delayTimeRelay,       nullptr)),
-      delayDivisionAttachment (std::make_unique<juce::WebComboBoxParameterAttachment> (
-          *audioProcessor.parameters.getParameter ("delay_division"),    *delayDivisionRelay,   nullptr)),
       delayFeedbackAttachment (std::make_unique<juce::WebSliderParameterAttachment> (
           *audioProcessor.parameters.getParameter ("delay_feedback"),    *delayFeedbackRelay,   nullptr)),
       delayMixAttachment (std::make_unique<juce::WebSliderParameterAttachment> (
           *audioProcessor.parameters.getParameter ("delay_mix"),         *delayMixRelay,        nullptr)),
-      delayReverbSendAttachment (std::make_unique<juce::WebSliderParameterAttachment> (
-          *audioProcessor.parameters.getParameter ("delay_reverb_send"), *delayReverbSendRelay, nullptr)),
       delayBypassAttachment (std::make_unique<juce::WebToggleButtonParameterAttachment> (
           *audioProcessor.parameters.getParameter ("delay_bypass"),      *delayBypassRelay,     nullptr)),
 

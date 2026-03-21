@@ -186,11 +186,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout VocalStripAudioProcessor::cr
         0  // Default: Slapback
     ));
 
-    // delay_time — Delay time in milliseconds (Slapback mode)
+    // delay_time — Delay time in milliseconds (Slapback mode, max 250ms)
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID { "delay_time", 1 },
         "Delay Time",
-        juce::NormalisableRange<float>(20.0f, 200.0f, 0.1f, 1.0f),
+        juce::NormalisableRange<float>(20.0f, 250.0f, 0.1f, 1.0f),
         100.0f,
         "ms"
     ));
@@ -551,13 +551,10 @@ void VocalStripAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // =========================================================================
 
     // Read delay parameters (atomic, real-time safe)
-    const int  delayMode        = static_cast<int>(parameters.getRawParameterValue("delay_mode")->load());
-    const auto delayTimeMs      = parameters.getRawParameterValue("delay_time")->load();
-    const int  delayDivision    = static_cast<int>(parameters.getRawParameterValue("delay_division")->load());
-    const auto delayFeedback    = parameters.getRawParameterValue("delay_feedback")->load();
-    const auto delayMix         = parameters.getRawParameterValue("delay_mix")->load();
-    const auto delayReverbSend  = parameters.getRawParameterValue("delay_reverb_send")->load();
-    const bool delayBypass      = parameters.getRawParameterValue("delay_bypass")->load() > 0.5f;
+    const auto delayTimeMs  = parameters.getRawParameterValue("delay_time")->load();
+    const auto delayFeedback = parameters.getRawParameterValue("delay_feedback")->load();
+    const auto delayMix     = parameters.getRawParameterValue("delay_mix")->load();
+    const bool delayBypass  = parameters.getRawParameterValue("delay_bypass")->load() > 0.5f;
 
     // Ensure reverbSendBuffer is large enough for this block (no alloc if already sized)
     if (reverbSendBuffer.getNumSamples() < numSamples)
@@ -565,46 +562,18 @@ void VocalStripAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
     if (!delayBypass)
     {
-        // Compute delay time in samples
-        float delayMs = delayTimeMs; // Slapback mode default
-
-        if (delayMode == 1) // Sync mode
-        {
-            // Read BPM from host with fallback
-            double bpm = 120.0;
-            if (auto* playHead = getPlayHead())
-            {
-                if (auto pos = playHead->getPosition())
-                {
-                    if (auto hostBpm = pos->getBpm())
-                        bpm = *hostBpm;
-                }
-            }
-
-            // Division multipliers: 1/16=0.25, 1/8=0.5, 1/4=1.0, 1/2=2.0
-            const float divisionMultipliers[] = { 0.25f, 0.5f, 1.0f, 2.0f };
-            const float quarterNoteMs = 60000.0f / static_cast<float>(bpm);
-            delayMs = quarterNoteMs * divisionMultipliers[delayDivision];
-        }
-
-        // Clamp delay time to safe range and convert to samples
-        delayMs = juce::jlimit(1.0f, 1000.0f, delayMs);
+        // Slapback mode only — direct ms value, clamped to safe range
+        const float delayMs = juce::jlimit(1.0f, 250.0f, delayTimeMs);
         const float delaySamples = delayMs * static_cast<float>(currentSampleRate) / 1000.0f;
         delayLine.setDelay(delaySamples);
 
-        // Set delay dry/wet mix proportion
         delayDryWet.setWetMixProportion(delayMix / 100.0f);
 
-        // Push dry samples into DryWetMixer BEFORE delay processing
-        // Extract mono ch0 as AudioBlock for the mixer
         auto monoBlock = juce::dsp::AudioBlock<float>(buffer).getSingleChannelBlock(0);
         delayDryWet.pushDrySamples(monoBlock);
 
-        // Per-sample delay processing with feedback on ch0
         const float feedbackGain = delayFeedback / 100.0f;
-        const float sendGain = delayReverbSend / 100.0f;
         auto* ch0 = buffer.getWritePointer(0);
-        auto* sendData = reverbSendBuffer.getWritePointer(0);
 
         for (int n = 0; n < numSamples; ++n)
         {
@@ -612,29 +581,18 @@ void VocalStripAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
             delayLine.pushSample(0, inputWithFeedback);
             const float wetSample = delayLine.popSample(0, delaySamples);
             feedbackSample = wetSample * feedbackGain;
-
-            // Write wet sample back to ch0 for DryWetMixer
             ch0[n] = wetSample;
-
-            // Populate reverb send buffer (pre-D/W mix, pure delay wet signal)
-            sendData[n] = wetSample * sendGain;
         }
 
-        // Apply delay dry/wet mix on ch0
         auto wetBlock = juce::dsp::AudioBlock<float>(buffer).getSingleChannelBlock(0);
         delayDryWet.mixWetSamples(wetBlock);
 
-        // Copy delay-mixed mono result to ch1 (stereo output)
         if (buffer.getNumChannels() >= 2)
             buffer.copyFrom(1, 0, buffer, 0, 0, numSamples);
     }
-    else
-    {
-        // Delay bypassed: clear reverb send buffer (no delay output to send)
-        reverbSendBuffer.clear(0, 0, numSamples);
 
-        // Stereo signal from Phase DSP-1 passes through unchanged
-    }
+    // Reverb send always 0 — clear buffer regardless of delay bypass state
+    reverbSendBuffer.clear(0, 0, numSamples);
 
     // =========================================================================
     // Phase DSP-3: Reverb Section + Full Chain Integration

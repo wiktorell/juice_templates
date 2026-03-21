@@ -720,48 +720,21 @@
         <div class="section-label">Delay</div>
         <div class="controls-area">
 
-          <div class="pill-switch" id="delay-mode-switch" style="top:0px;">
-            <div class="pill-option active" data-mode="0" id="delay-slapback">Slapback</div>
-            <div class="pill-option" data-mode="1" id="delay-sync">Sync</div>
-          </div>
-
-          <!-- Upper row: Slapback Time knob -->
-          <div class="knob-wrap" id="delay-time-knob" style="left:0px; top:36px;">
-            <div class="knob" data-param="delay_time" data-min="20" data-max="200" data-val="100" data-default="100"></div>
+          <!-- 3 knobs at top:105px — same height as comp and EQ mid rows -->
+          <div class="knob-wrap" style="left:0px; top:105px;">
+            <div class="knob" data-param="delay_time" data-min="20" data-max="250" data-val="100" data-default="100"></div>
             <div class="knob-label">Time</div>
             <div class="knob-value" id="val-delay_time">100 ms</div>
           </div>
-
-          <!-- Upper row: Sync Division buttons -->
-          <div class="division-group hidden" id="delay-division-group">
-            <button class="division-btn" data-div="0">1/16</button>
-            <button class="division-btn active" data-div="1">1/8</button>
-            <button class="division-btn" data-div="2">1/4</button>
-            <button class="division-btn" data-div="3">1/2</button>
-          </div>
-
-          <!-- Lower row: Feedback + Mix — always visible -->
-          <div class="knob-wrap" style="left:0px; top:141px;">
+          <div class="knob-wrap" style="left:91px; top:105px;">
             <div class="knob" data-param="delay_feedback" data-min="0" data-max="90" data-val="20" data-default="20"></div>
             <div class="knob-label">Feedback</div>
             <div class="knob-value" id="val-delay_feedback">20 %</div>
           </div>
-          <div class="knob-wrap" style="left:91px; top:141px;">
+          <div class="knob-wrap" style="left:182px; top:105px;">
             <div class="knob" data-param="delay_mix" data-min="0" data-max="100" data-val="30" data-default="30"></div>
             <div class="knob-label">Mix</div>
             <div class="knob-value" id="val-delay_mix">30 %</div>
-          </div>
-
-          <!-- Reverb Send Slider -->
-          <div class="send-slider-wrap" id="sendSliderWrap" style="left:13px; top:240px;">
-            <div class="send-slider-label">
-              <span class="arrow-icon">&#8594;</span>Reverb Send
-            </div>
-            <div class="send-slider-track" id="sendTrack">
-              <div class="send-slider-fill" id="sendFill" style="width:20%;"></div>
-              <div class="send-slider-thumb" id="sendThumb" style="left:20%;"></div>
-            </div>
-            <div class="knob-value" id="val-delay_reverb_send">20 %</div>
           </div>
 
         </div>
@@ -967,79 +940,6 @@
         if (sliderState) sliderState.setNormalisedValue(norm);
       });
     });
-
-    /* ============================================================
-       DELAY MODE TOGGLE (delay_mode combo)
-    ============================================================ */
-    (function initDelayMode() {
-      var switchEl = document.getElementById("delay-mode-switch");
-      var slapBtn = document.getElementById("delay-slapback");
-      var syncBtn = document.getElementById("delay-sync");
-      var timeKnob = document.getElementById("delay-time-knob");
-      var divGroup = document.getElementById("delay-division-group");
-
-      var delayModeState = getComboBoxState("delay_mode");
-      var currentMode = 0; // default: slapback
-
-      function setMode(mode) {
-        currentMode = mode;
-        if (mode === 0) {
-          slapBtn.classList.add("active");
-          syncBtn.classList.remove("active");
-          timeKnob.classList.remove("hidden");
-          divGroup.classList.add("hidden");
-        } else {
-          syncBtn.classList.add("active");
-          slapBtn.classList.remove("active");
-          timeKnob.classList.add("hidden");
-          divGroup.classList.remove("hidden");
-        }
-      }
-
-      if (delayModeState) {
-        currentMode = delayModeState.getChoiceIndex();
-        delayModeState.valueChangedEvent.addListener(function() {
-          setMode(delayModeState.getChoiceIndex());
-        });
-      }
-
-      setMode(currentMode);
-
-      switchEl.addEventListener("click", function(e) {
-        var opt = e.target.closest(".pill-option");
-        if (!opt) return;
-        var mode = parseInt(opt.dataset.mode);
-        setMode(mode);
-        if (delayModeState) delayModeState.setChoiceIndex(mode);
-      });
-
-      // delay_division combo
-      var divisionState = getComboBoxState("delay_division");
-      var currentDiv = divisionState ? divisionState.getChoiceIndex() : 1;
-
-      if (divisionState) {
-        divisionState.valueChangedEvent.addListener(function() {
-          currentDiv = divisionState.getChoiceIndex();
-          divGroup.querySelectorAll(".division-btn").forEach(function(b) {
-            b.classList.toggle("active", parseInt(b.dataset.div) === currentDiv);
-          });
-        });
-      }
-
-      // Set initial division highlight
-      divGroup.querySelectorAll(".division-btn").forEach(function(b) {
-        b.classList.toggle("active", parseInt(b.dataset.div) === currentDiv);
-      });
-
-      divGroup.addEventListener("click", function(e) {
-        var btn = e.target.closest(".division-btn");
-        if (!btn) return;
-        currentDiv = parseInt(btn.dataset.div);
-        divGroup.querySelectorAll(".division-btn").forEach(function(b) { b.classList.remove("active"); });
-        btn.classList.add("active");
-        if (divisionState) divisionState.setChoiceIndex(currentDiv);
-      });
-    })();
 
     /* ============================================================
        REVERB TYPE TOGGLE (reverb_type combo)

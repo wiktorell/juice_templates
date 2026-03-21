@@ -40,12 +40,9 @@ private:
     std::unique_ptr<juce::WebToggleButtonRelay>  compBypassRelay;
 
     // Delay Section
-    std::unique_ptr<juce::WebComboBoxRelay>      delayModeRelay;
     std::unique_ptr<juce::WebSliderRelay>        delayTimeRelay;
-    std::unique_ptr<juce::WebComboBoxRelay>      delayDivisionRelay;
     std::unique_ptr<juce::WebSliderRelay>        delayFeedbackRelay;
     std::unique_ptr<juce::WebSliderRelay>        delayMixRelay;
-    std::unique_ptr<juce::WebSliderRelay>        delayReverbSendRelay;
     std::unique_ptr<juce::WebToggleButtonRelay>  delayBypassRelay;
 
     // Reverb Section
@@ -80,12 +77,9 @@ private:
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> compBypassAttachment;
 
     // Delay attachments
-    std::unique_ptr<juce::WebComboBoxParameterAttachment>     delayModeAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment>       delayTimeAttachment;
-    std::unique_ptr<juce::WebComboBoxParameterAttachment>     delayDivisionAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment>       delayFeedbackAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment>       delayMixAttachment;
-    std::unique_ptr<juce::WebSliderParameterAttachment>       delayReverbSendAttachment;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> delayBypassAttachment;
 
     // Reverb attachments
