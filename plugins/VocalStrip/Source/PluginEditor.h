@@ -34,13 +34,9 @@ private:
     std::unique_ptr<juce::WebToggleButtonRelay>  eqBypassRelay;
 
     // Compressor Section
-    std::unique_ptr<juce::WebComboBoxRelay>      compModeRelay;
     std::unique_ptr<juce::WebSliderRelay>        compAmountRelay;
-    std::unique_ptr<juce::WebSliderRelay>        compThresholdRelay;
-    std::unique_ptr<juce::WebSliderRelay>        compRatioRelay;
     std::unique_ptr<juce::WebSliderRelay>        compAttackRelay;
     std::unique_ptr<juce::WebSliderRelay>        compReleaseRelay;
-    std::unique_ptr<juce::WebSliderRelay>        compMakeupRelay;
     std::unique_ptr<juce::WebToggleButtonRelay>  compBypassRelay;
 
     // Delay Section
@@ -78,13 +74,9 @@ private:
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> eqBypassAttachment;
 
     // Compressor attachments
-    std::unique_ptr<juce::WebComboBoxParameterAttachment>     compModeAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment>       compAmountAttachment;
-    std::unique_ptr<juce::WebSliderParameterAttachment>       compThresholdAttachment;
-    std::unique_ptr<juce::WebSliderParameterAttachment>       compRatioAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment>       compAttackAttachment;
     std::unique_ptr<juce::WebSliderParameterAttachment>       compReleaseAttachment;
-    std::unique_ptr<juce::WebSliderParameterAttachment>       compMakeupAttachment;
     std::unique_ptr<juce::WebToggleButtonParameterAttachment> compBypassAttachment;
 
     // Delay attachments

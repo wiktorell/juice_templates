@@ -1,5 +1,15 @@
 # VocalStrip Changelog
 
+## [1.2.0] — 2026-03-21
+
+### Changed
+- Compressor simplified to 3 knobs: Amount, Attack, Release — mode switch removed
+- Amount knob controls threshold (-6→-40 dB), ratio (2:1→10:1) and auto gain compensation simultaneously
+- Auto-makeup calculated as `|threshold| × (1 - 1/ratio) × 0.5` — gain compensates automatically as Amount increases
+- Compressor knobs positioned at same height as EQ Mid row (top:105px)
+- Removed: Simple/Manual mode switch, Threshold, Ratio, Makeup knobs from UI
+- Retained: comp_mode, comp_threshold, comp_ratio, comp_makeup APVTS parameters for state compatibility
+
 ## [1.1.0] — 2026-03-21
 
 ### Added

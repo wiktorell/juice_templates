@@ -37,13 +37,9 @@ VocalStripAudioProcessorEditor::VocalStripAudioProcessorEditor (VocalStripAudioP
       eqBypassRelay        (std::make_unique<juce::WebToggleButtonRelay>("eq_bypass")),
 
       // Compressor relays
-      compModeRelay        (std::make_unique<juce::WebComboBoxRelay>    ("comp_mode")),
       compAmountRelay      (std::make_unique<juce::WebSliderRelay>      ("comp_amount")),
-      compThresholdRelay   (std::make_unique<juce::WebSliderRelay>      ("comp_threshold")),
-      compRatioRelay       (std::make_unique<juce::WebSliderRelay>      ("comp_ratio")),
       compAttackRelay      (std::make_unique<juce::WebSliderRelay>      ("comp_attack")),
       compReleaseRelay     (std::make_unique<juce::WebSliderRelay>      ("comp_release")),
-      compMakeupRelay      (std::make_unique<juce::WebSliderRelay>      ("comp_makeup")),
       compBypassRelay      (std::make_unique<juce::WebToggleButtonRelay>("comp_bypass")),
 
       // Delay relays
@@ -83,13 +79,9 @@ VocalStripAudioProcessorEditor::VocalStripAudioProcessorEditor (VocalStripAudioP
               .withOptionsFrom (*eqHighShelfGainRelay)
               .withOptionsFrom (*eqBypassRelay)
               // Compressor relays
-              .withOptionsFrom (*compModeRelay)
               .withOptionsFrom (*compAmountRelay)
-              .withOptionsFrom (*compThresholdRelay)
-              .withOptionsFrom (*compRatioRelay)
               .withOptionsFrom (*compAttackRelay)
               .withOptionsFrom (*compReleaseRelay)
-              .withOptionsFrom (*compMakeupRelay)
               .withOptionsFrom (*compBypassRelay)
               // Delay relays
               .withOptionsFrom (*delayModeRelay)
@@ -130,20 +122,12 @@ VocalStripAudioProcessorEditor::VocalStripAudioProcessorEditor (VocalStripAudioP
           *audioProcessor.parameters.getParameter ("eq_bypass"),         *eqBypassRelay,        nullptr)),
 
       // Compressor attachments
-      compModeAttachment (std::make_unique<juce::WebComboBoxParameterAttachment> (
-          *audioProcessor.parameters.getParameter ("comp_mode"),         *compModeRelay,        nullptr)),
       compAmountAttachment (std::make_unique<juce::WebSliderParameterAttachment> (
           *audioProcessor.parameters.getParameter ("comp_amount"),       *compAmountRelay,      nullptr)),
-      compThresholdAttachment (std::make_unique<juce::WebSliderParameterAttachment> (
-          *audioProcessor.parameters.getParameter ("comp_threshold"),    *compThresholdRelay,   nullptr)),
-      compRatioAttachment (std::make_unique<juce::WebSliderParameterAttachment> (
-          *audioProcessor.parameters.getParameter ("comp_ratio"),        *compRatioRelay,       nullptr)),
       compAttackAttachment (std::make_unique<juce::WebSliderParameterAttachment> (
           *audioProcessor.parameters.getParameter ("comp_attack"),       *compAttackRelay,      nullptr)),
       compReleaseAttachment (std::make_unique<juce::WebSliderParameterAttachment> (
           *audioProcessor.parameters.getParameter ("comp_release"),      *compReleaseRelay,     nullptr)),
-      compMakeupAttachment (std::make_unique<juce::WebSliderParameterAttachment> (
-          *audioProcessor.parameters.getParameter ("comp_makeup"),       *compMakeupRelay,      nullptr)),
       compBypassAttachment (std::make_unique<juce::WebToggleButtonParameterAttachment> (
           *audioProcessor.parameters.getParameter ("comp_bypass"),       *compBypassRelay,      nullptr)),
 

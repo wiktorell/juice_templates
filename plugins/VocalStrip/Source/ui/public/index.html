@@ -670,45 +670,21 @@
         <div class="section-label">Comp</div>
         <div class="controls-area">
 
-          <div class="pill-switch" id="comp-mode-switch" style="top:0px;">
-            <div class="pill-option" data-mode="0" id="comp-simple">Simple</div>
-            <div class="pill-option active" data-mode="1" id="comp-manual">Manual</div>
-          </div>
+          <!-- 3 knobs: Amount, Attack, Release — at top:105px (same height as Mid Gain) -->
+          <div id="comp-controls">
 
-          <!-- Simple mode: single large Amount knob -->
-          <div class="knob-wrap hidden" id="comp-simple-controls" style="left:82px; top:36px;">
-            <div class="knob large" data-param="comp_amount" data-min="0" data-max="100" data-val="50" data-default="50"></div>
-            <div class="knob-label">Amount</div>
-            <div class="knob-value" id="val-comp_amount">50 %</div>
-          </div>
-
-          <!-- Manual mode: 5 knobs -->
-          <div id="comp-manual-controls">
-
-            <!-- Row 1: Threshold, Ratio, Makeup -->
-            <div class="knob-wrap" style="left:0px; top:36px;">
-              <div class="knob" data-param="comp_threshold" data-min="-60" data-max="0" data-val="-18" data-default="-18"></div>
-              <div class="knob-label">Threshold</div>
-              <div class="knob-value" id="val-comp_threshold">-18 dB</div>
+            <!-- Row: Amount, Attack, Release -->
+            <div class="knob-wrap" style="left:0px; top:105px;">
+              <div class="knob" data-param="comp_amount" data-min="0" data-max="100" data-val="50" data-default="50"></div>
+              <div class="knob-label">Amount</div>
+              <div class="knob-value" id="val-comp_amount">50 %</div>
             </div>
-            <div class="knob-wrap" style="left:91px; top:36px;">
-              <div class="knob" data-param="comp_ratio" data-min="1" data-max="20" data-val="4" data-default="4"></div>
-              <div class="knob-label">Ratio</div>
-              <div class="knob-value" id="val-comp_ratio">4.0 :1</div>
-            </div>
-            <div class="knob-wrap" style="left:182px; top:36px;">
-              <div class="knob" data-param="comp_makeup" data-min="0" data-max="24" data-val="0" data-default="0"></div>
-              <div class="knob-label">Makeup</div>
-              <div class="knob-value" id="val-comp_makeup">0.0 dB</div>
-            </div>
-
-            <!-- Row 2: Attack, Release -->
-            <div class="knob-wrap" style="left:0px; top:141px;">
+            <div class="knob-wrap" style="left:91px; top:105px;">
               <div class="knob" data-param="comp_attack" data-min="0.1" data-max="100" data-val="10" data-default="10"></div>
               <div class="knob-label">Attack</div>
               <div class="knob-value" id="val-comp_attack">10 ms</div>
             </div>
-            <div class="knob-wrap" style="left:91px; top:141px;">
+            <div class="knob-wrap" style="left:182px; top:105px;">
               <div class="knob" data-param="comp_release" data-min="10" data-max="1000" data-val="200" data-default="200"></div>
               <div class="knob-label">Release</div>
               <div class="knob-value" id="val-comp_release">200 ms</div>
@@ -986,52 +962,6 @@
         if (sliderState) sliderState.setNormalisedValue(norm);
       });
     });
-
-    /* ============================================================
-       COMP MODE TOGGLE (comp_mode combo)
-    ============================================================ */
-    (function initCompMode() {
-      var switchEl = document.getElementById("comp-mode-switch");
-      var simpleBtn = document.getElementById("comp-simple");
-      var manualBtn = document.getElementById("comp-manual");
-      var simpleControls = document.getElementById("comp-simple-controls");
-      var manualControls = document.getElementById("comp-manual-controls");
-
-      var compModeState = getComboBoxState("comp_mode");
-      var currentMode = 1; // default: manual
-
-      function setMode(mode) {
-        currentMode = mode;
-        if (mode === 0) {
-          simpleBtn.classList.add("active");
-          manualBtn.classList.remove("active");
-          simpleControls.classList.remove("hidden");
-          manualControls.classList.add("hidden");
-        } else {
-          manualBtn.classList.add("active");
-          simpleBtn.classList.remove("active");
-          manualControls.classList.remove("hidden");
-          simpleControls.classList.add("hidden");
-        }
-      }
-
-      if (compModeState) {
-        currentMode = compModeState.getChoiceIndex();
-        compModeState.valueChangedEvent.addListener(function() {
-          setMode(compModeState.getChoiceIndex());
-        });
-      }
-
-      setMode(currentMode);
-
-      switchEl.addEventListener("click", function(e) {
-        var opt = e.target.closest(".pill-option");
-        if (!opt) return;
-        var mode = parseInt(opt.dataset.mode);
-        setMode(mode);
-        if (compModeState) compModeState.setChoiceIndex(mode);
-      });
-    })();
 
     /* ============================================================
        DELAY MODE TOGGLE (delay_mode combo)

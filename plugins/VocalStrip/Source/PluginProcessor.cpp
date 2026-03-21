@@ -446,14 +446,10 @@ void VocalStripAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // =========================================================================
     // Read Compressor parameters (atomic, real-time safe)
     // =========================================================================
-    const int  compMode      = static_cast<int>(parameters.getRawParameterValue("comp_mode")->load());
-    const auto compAmount    = parameters.getRawParameterValue("comp_amount")->load();
-    const auto compThreshold = parameters.getRawParameterValue("comp_threshold")->load();
-    const auto compRatio     = parameters.getRawParameterValue("comp_ratio")->load();
-    const auto compAttack    = parameters.getRawParameterValue("comp_attack")->load();
-    const auto compRelease   = parameters.getRawParameterValue("comp_release")->load();
-    const auto compMakeup    = parameters.getRawParameterValue("comp_makeup")->load();
-    const bool compBypass    = parameters.getRawParameterValue("comp_bypass")->load() > 0.5f;
+    const auto compAmount  = parameters.getRawParameterValue("comp_amount")->load();
+    const auto compAttack  = parameters.getRawParameterValue("comp_attack")->load();
+    const auto compRelease = parameters.getRawParameterValue("comp_release")->load();
+    const bool compBypass  = parameters.getRawParameterValue("comp_bypass")->load() > 0.5f;
 
     // =========================================================================
     // EQ Processing (mono, channel 0 only)
@@ -496,32 +492,17 @@ void VocalStripAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // =========================================================================
     if (!compBypass)
     {
-        // Compute compressor parameters based on mode
-        float thresholdDB;
-        float ratio;
-        float attackMs;
-        float releaseMs;
-
-        if (compMode == 0) // Simple mode
-        {
-            const float amountNorm = compAmount / 100.0f;
-            thresholdDB = -6.0f - (amountNorm * 34.0f);   // -6 to -40 dB
-            ratio       = 2.0f + (amountNorm * 8.0f);      // 2:1 to 10:1
-            attackMs    = 10.0f;                            // Fixed in Simple mode
-            releaseMs   = 200.0f;                           // Fixed in Simple mode
-        }
-        else // Manual mode
-        {
-            thresholdDB = compThreshold;
-            ratio       = compRatio;
-            attackMs    = compAttack;
-            releaseMs   = compRelease;
-        }
+        // Amount-based compressor: threshold, ratio and auto-makeup all derived from Amount
+        const float amountNorm  = compAmount / 100.0f;
+        const float thresholdDB = -6.0f - (amountNorm * 34.0f);    // -6 to -40 dB
+        const float ratio       = 2.0f + (amountNorm * 8.0f);      // 2:1 to 10:1
+        // Auto gain compensation: ~50% of the steady-state gain reduction
+        const float autoMakeupDB = std::abs(thresholdDB) * (1.0f - 1.0f / ratio) * 0.5f;
 
         compressor.setThreshold(thresholdDB);
         compressor.setRatio(ratio);
-        compressor.setAttack(attackMs);
-        compressor.setRelease(releaseMs);
+        compressor.setAttack(compAttack);
+        compressor.setRelease(compRelease);
 
         // Measure input RMS before compression (mono ch0)
         const float inputRMS = buffer.getRMSLevel(0, 0, numSamples);
@@ -531,24 +512,22 @@ void VocalStripAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         juce::dsp::ProcessContextReplacing<float> monoContext(monoBlock);
         compressor.process(monoContext);
 
-        // Apply makeup gain
-        const float makeupGain = juce::Decibels::decibelsToGain(compMakeup);
+        // Measure output RMS after compression (before makeup)
+        const float outputRMSPreMakeup = buffer.getRMSLevel(0, 0, numSamples);
+
+        // Apply auto makeup gain
+        const float makeupGain = juce::Decibels::decibelsToGain(autoMakeupDB);
         if (makeupGain != 1.0f)
         {
             auto* ch0 = buffer.getWritePointer(0);
             juce::FloatVectorOperations::multiply(ch0, makeupGain, numSamples);
         }
 
-        // Measure output RMS after compression + makeup
-        const float outputRMS = buffer.getRMSLevel(0, 0, numSamples);
-
-        // Compute gain reduction in dB from RMS ratio
+        // Compute gain reduction in dB from RMS ratio (pre-makeup for accurate GR reading)
         float grDB = 0.0f;
-        if (inputRMS > 1.0e-6f && outputRMS > 1.0e-6f)
+        if (inputRMS > 1.0e-6f && outputRMSPreMakeup > 1.0e-6f)
         {
-            // GR = output - input (in dB), excluding makeup gain for accurate GR reading
-            const float outputWithoutMakeup = outputRMS / makeupGain;
-            grDB = 20.0f * std::log10(outputWithoutMakeup / inputRMS);
+            grDB = 20.0f * std::log10(outputRMSPreMakeup / inputRMS);
             grDB = juce::jlimit(-30.0f, 0.0f, grDB);
         }
         grMeterValue.store(grDB);
